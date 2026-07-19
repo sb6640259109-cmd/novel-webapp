@@ -2,17 +2,24 @@
   "name": "final_project",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --hostname 0.0.0.0 --port 3000",
     "build": "next build",
-    "start": "next start",
-    "lint": "eslint"
+    "start": "next start --hostname 0.0.0.0 --port 3000",
+    "lint": "eslint",
+    "seed:test-users": "node scripts/seed-role-test-users.mjs",
+    "postinstall": "prisma generate"
   },
   "dependencies": {
+    "@prisma/adapter-mariadb": "^7.8.0",
+    "@prisma/client": "^7.8.0",
     "axios": "^1.18.1",
     "bcryptjs": "^3.0.3",
     "cookie": "^2.0.1",
+    "dotenv": "^17.4.2",
     "firebase": "^12.16.0",
+    "firebase-admin": "^14.2.0",
     "jsonwebtoken": "^9.0.3",
     "next": "16.2.10",
     "react": "19.2.4",
@@ -22,6 +29,7 @@
     "@tailwindcss/postcss": "^4",
     "eslint": "^9",
     "eslint-config-next": "16.2.10",
+    "prisma": "^7.8.0",
     "tailwindcss": "^4"
   }
 }

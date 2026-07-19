@@ -1,13 +1,16 @@
 import bcrypt from 'bcryptjs';
-import { findUserByEmailOrUsername, saveUser } from '@/lib/data-store';
+import { NextResponse } from 'next/server';
+import prisma from '@/lib/prisma';
 import { signToken } from '@/lib/jwt';
-import { setAuthCookie } from '@/lib/cookies';
+import { AUTH_COOKIE_NAME, getAuthCookieOptions } from '@/lib/cookies';
 import { registerWithFirebase } from '@/lib/firebase';
 
 export async function POST(request) {
   try {
     const body = await request.json();
-    const { username, email, password } = body;
+    const username = body.username?.trim();
+    const email = body.email?.trim().toLowerCase();
+    const { password } = body;
 
     if (!username || !email || !password) {
       return Response.json(
@@ -16,7 +19,9 @@ export async function POST(request) {
       );
     }
 
-    const existingUser = findUserByEmailOrUsername(email, username);
+    const existingUser = await prisma.user.findFirst({
+      where: { OR: [{ email }, { username }] },
+    });
 
     if (existingUser) {
       return Response.json(
@@ -28,36 +33,33 @@ export async function POST(request) {
     const firebaseUser = await registerWithFirebase(email, password);
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    const user = saveUser({
-      id: firebaseUser.localId || `firebase-${email}`,
-      username,
-      email,
-      password: hashedPassword,
-      firebaseUid: firebaseUser.localId,
-      firebaseToken: firebaseUser.idToken,
+    const user = await prisma.user.create({
+      data: {
+        id: firebaseUser.localId || undefined,
+        username,
+        email,
+        password: hashedPassword,
+        firebaseUid: firebaseUser.localId || null,
+        role: 'READER',
+      },
     });
 
-    const tokenPayload = { id: user.id, username, email, firebaseUid: firebaseUser.localId };
-    const userData = { id: user.id, username: user.username, email: user.email };
+    const tokenPayload = { id: user.id, username, email, role: user.role, firebaseUid: firebaseUser.localId };
+    const userData = { id: user.id, username: user.username, email: user.email, role: user.role };
 
     const token = signToken(tokenPayload);
-    const cookie = setAuthCookie(token);
+    const response = NextResponse.json({
+      success: true,
+      message: 'ลงทะเบียนสำเร็จด้วย Firebase Auth',
+      user: userData,
+      firebase: {
+        uid: firebaseUser.localId,
+        email: firebaseUser.email,
+      },
+    });
 
-    return new Response(
-      JSON.stringify({
-        success: true,
-        message: 'ลงทะเบียนสำเร็จด้วย Firebase Auth',
-        user: userData,
-        firebase: {
-          uid: firebaseUser.localId,
-          email: firebaseUser.email,
-        },
-      }),
-      {
-        status: 200,
-        headers: { 'Set-Cookie': cookie, 'Content-Type': 'application/json' },
-      }
-    );
+    response.cookies.set(AUTH_COOKIE_NAME, token, getAuthCookieOptions(request));
+    return response;
   } catch (error) {
     console.error('Register API error:', error);
     const message = error instanceof Error ? error.message : 'เกิดข้อผิดพลาดในการลงทะเบียน';

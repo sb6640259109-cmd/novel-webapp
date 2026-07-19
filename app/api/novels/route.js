@@ -1,48 +1,31 @@
-import { createNovel, getNovels } from '@/lib/data-store';
-import { getAuthUser } from '@/lib/auth';
+import { getAuthUser, hasRole, ROLES } from '@/lib/auth';
+import { addNovel, listNovels, normalizeNovel, validateNovel } from '@/lib/novels';
 
 export async function GET(request) {
   try {
-    const authUser = getAuthUser(request);
-    if (!authUser) {
-      return new Response(
-        JSON.stringify({ success: false, message: 'ไม่อนุญาตให้เข้าถึง' }),
-        { status: 401, headers: { 'Content-Type': 'application/json' } }
-      );
-    }
-
-    const novels = getNovels();
-
-    return Response.json({ success: true, novels });
+    const user = getAuthUser(request);
+    const novels = await listNovels();
+    const visible = hasRole(user, [ROLES.AUTHOR, ROLES.ADMIN])
+      ? novels
+      : novels.filter((novel) => !novel.moderationStatus || novel.moderationStatus === 'ACTIVE');
+    return Response.json({ success: true, novels: visible, database: 'firestore' });
   } catch (error) {
-    console.error('Novels API error:', error);
-    return Response.json({ success: false, message: 'เกิดข้อผิดพลาดในการดึงข้อมูลนิยาย' }, { status: 500 });
+    console.error('Firestore list novels error:', error);
+    return Response.json({ success: false, message: 'เชื่อมต่อ Cloud Firestore ไม่สำเร็จ กรุณาตรวจสอบ service account และเปิดใช้งาน Firestore' }, { status: 500 });
   }
 }
 
 export async function POST(request) {
   try {
-    const authUser = getAuthUser(request);
-    if (!authUser) {
-      return new Response(
-        JSON.stringify({ success: false, message: 'ไม่อนุญาตให้เข้าถึง' }),
-        { status: 401, headers: { 'Content-Type': 'application/json' } }
-      );
-    }
-
-    const body = await request.json();
-    const novel = createNovel({
-      title: body.title,
-      author: body.author,
-      genre: body.genre,
-      description: body.description,
-      rating: Number(body.rating || 0),
-      image: body.image || null,
-    });
-
-    return Response.json({ success: true, novel });
+    const user = getAuthUser(request);
+    if (!user) return Response.json({ success: false, message: 'กรุณาเข้าสู่ระบบก่อนจัดการนิยาย' }, { status: 401 });
+    if (!hasRole(user, [ROLES.AUTHOR])) return Response.json({ success: false, message: 'เฉพาะนักเขียนเท่านั้นที่เพิ่มนิยายได้' }, { status: 403 });
+    const novel = normalizeNovel(await request.json());
+    const validationError = validateNovel(novel);
+    if (validationError) return Response.json({ success: false, message: validationError }, { status: 400 });
+    return Response.json({ success: true, novel: await addNovel(novel, user) }, { status: 201 });
   } catch (error) {
-    console.error(error);
-    return Response.json({ success: false, message: 'เพิ่มนิยายไม่สำเร็จ' }, { status: 500 });
+    console.error('Firestore create novel error:', error);
+    return Response.json({ success: false, message: 'เพิ่มนิยายใน Cloud Firestore ไม่สำเร็จ' }, { status: 500 });
   }
 }

@@ -1,66 +1,63 @@
-import { deleteNovel, getNovelById, updateNovel } from '@/lib/data-store';
-import { getAuthUser } from '@/lib/auth';
+import { getAuthUser, hasRole, ROLES } from '@/lib/auth';
+import { removeAllChapters } from '@/lib/chapters';
+import { removeAllEngagement } from '@/lib/reader-data';
+import { canManageNovel, editNovel, findNovel, normalizeNovel, removeNovel, validateNovel } from '@/lib/novels';
 
-function authResponse() {
-  return new Response(
-    JSON.stringify({ success: false, message: 'ไม่อนุญาตให้เข้าถึง' }),
-    { status: 401, headers: { 'Content-Type': 'application/json' } }
-  );
+function unauthorized() {
+  return Response.json({ success: false, message: 'กรุณาเข้าสู่ระบบก่อนจัดการนิยาย' }, { status: 401 });
 }
 
-export async function GET(request, { params }) {
+function forbidden() {
+  return Response.json({ success: false, message: 'คุณไม่มีสิทธิ์จัดการนิยาย' }, { status: 403 });
+}
+
+export async function GET(_request, { params }) {
   try {
-    const authUser = getAuthUser(request);
-    if (!authUser) return authResponse();
-
-    const { id } = params;
-    const novel = getNovelById(id);
-
-    if (!novel) {
-      return Response.json({ success: false, message: 'ไม่พบนิยาย' }, { status: 404 });
-    }
-
-    return Response.json({ success: true, novel });
+    const novel = await findNovel((await params).id);
+    return novel
+      ? Response.json({ success: true, novel })
+      : Response.json({ success: false, message: 'ไม่พบนิยาย' }, { status: 404 });
   } catch (error) {
-    return Response.json({ success: false, message: 'เกิดข้อผิดพลาด' }, { status: 500 });
+    console.error('Firestore get novel error:', error);
+    return Response.json({ success: false, message: 'โหลดข้อมูลนิยายไม่สำเร็จ' }, { status: 500 });
   }
 }
 
 export async function PUT(request, { params }) {
   try {
-    const authUser = getAuthUser(request);
-    if (!authUser) return authResponse();
-
-    const { id } = params;
-    const body = await request.json();
-
-    const updated = updateNovel(id, {
-      title: body.title,
-      author: body.author,
-      genre: body.genre,
-      description: body.description,
-      rating: Number(body.rating || 0),
-      image: body.image || null,
-    });
-
-    return Response.json({ success: true, novel: updated });
+    const user = getAuthUser(request);
+    if (!user) return unauthorized();
+    if (!hasRole(user, [ROLES.AUTHOR, ROLES.ADMIN])) return forbidden();
+    const existing = await findNovel((await params).id);
+    if (!canManageNovel(user, existing)) return forbidden();
+    const novel = normalizeNovel(await request.json());
+    const validationError = validateNovel(novel);
+    if (validationError) return Response.json({ success: false, message: validationError }, { status: 400 });
+    const updated = await editNovel(existing.id, novel);
+    return updated
+      ? Response.json({ success: true, novel: updated })
+      : Response.json({ success: false, message: 'ไม่พบนิยาย' }, { status: 404 });
   } catch (error) {
-    console.error(error);
-    return Response.json({ success: false, message: 'แก้ไขนิยายไม่สำเร็จ' }, { status: 500 });
+    console.error('Firestore update novel error:', error);
+    return Response.json({ success: false, message: 'แก้ไขนิยายใน Cloud Firestore ไม่สำเร็จ' }, { status: 500 });
   }
 }
 
 export async function DELETE(request, { params }) {
   try {
-    const authUser = getAuthUser(request);
-    if (!authUser) return authResponse();
-
-    const { id } = params;
-    deleteNovel(id);
-
-    return Response.json({ success: true, message: 'ลบนิยายสำเร็จ' });
+    const user = getAuthUser(request);
+    if (!user) return unauthorized();
+    if (!hasRole(user, [ROLES.AUTHOR, ROLES.ADMIN])) return forbidden();
+    const novelId = (await params).id;
+    if (!canManageNovel(user, await findNovel(novelId))) return forbidden();
+    await removeAllChapters(novelId);
+    await removeAllEngagement(novelId);
+    const removed = await removeNovel(novelId);
+    return removed
+      ? Response.json({ success: true, message: 'ลบนิยายสำเร็จ' })
+      : Response.json({ success: false, message: 'ไม่พบนิยาย' }, { status: 404 });
   } catch (error) {
-    console.error(error);
-    return Response.json({ success: false, message: 'ลบนิยายไม่สำเร็จ' }, { status: 500 });
+    console.error('Firestore delete novel error:', error);
+    return Response.json({ success: false, message: 'ลบนิยายจาก Cloud Firestore ไม่สำเร็จ' }, { status: 500 });
   }
 }

@@ -1,0 +1,3 @@
+UPDATE `User` SET `role` = 'READER' WHERE `role` = 'USER';
+
+ALTER TABLE `User` MODIFY `role` VARCHAR(20) NOT NULL DEFAULT 'READER';

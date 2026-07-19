@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE `novel` ADD COLUMN `status` VARCHAR(20) NOT NULL DEFAULT 'PUBLISHED';

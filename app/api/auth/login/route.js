@@ -1,12 +1,15 @@
 import bcrypt from 'bcryptjs';
-import { findUserByEmail } from '@/lib/data-store';
+import { NextResponse } from 'next/server';
+import prisma from '@/lib/prisma';
 import { signToken } from '@/lib/jwt';
-import { setAuthCookie } from '@/lib/cookies';
+import { AUTH_COOKIE_NAME, getAuthCookieOptions } from '@/lib/cookies';
+import { normalizeRole } from '@/lib/auth';
 
 export async function POST(request) {
   try {
     const body = await request.json();
-    const { email, password } = body;
+    const email = body.email?.trim().toLowerCase();
+    const { password } = body;
 
     if (!email || !password) {
       return Response.json(
@@ -15,7 +18,7 @@ export async function POST(request) {
       );
     }
 
-    const user = findUserByEmail(email);
+    const user = await prisma.user.findUnique({ where: { email } });
 
     if (!user) {
       return Response.json(
@@ -33,24 +36,21 @@ export async function POST(request) {
       );
     }
 
-    const token = signToken({ id: user.id, email: user.email, username: user.username });
-    const cookie = setAuthCookie(token);
+    const role = normalizeRole(user.role);
+    const token = signToken({ id: user.id, email: user.email, username: user.username, role });
+    const response = NextResponse.json({
+      success: true,
+      message: 'เข้าสู่ระบบสำเร็จ',
+      user: {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        role,
+      },
+    });
 
-    return new Response(
-      JSON.stringify({
-        success: true,
-        message: 'เข้าสู่ระบบสำเร็จ',
-        user: {
-          id: user.id,
-          username: user.username,
-          email: user.email,
-        },
-      }),
-      {
-        status: 200,
-        headers: { 'Set-Cookie': cookie, 'Content-Type': 'application/json' },
-      }
-    );
+    response.cookies.set(AUTH_COOKIE_NAME, token, getAuthCookieOptions(request));
+    return response;
   } catch (error) {
     console.error('Login API error:', error);
     return Response.json(

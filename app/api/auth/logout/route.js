@@ -1,13 +1,11 @@
-import { deleteAuthCookie } from '@/lib/cookies';
+import { NextResponse } from 'next/server';
+import { AUTH_COOKIE_NAME, getAuthCookieOptions } from '@/lib/cookies';
 
-export async function POST() {
-  const cookie = deleteAuthCookie();
-
-  return new Response(
-    JSON.stringify({ success: true, message: 'ออกจากระบบสำเร็จ' }),
-    {
-      status: 200,
-      headers: { 'Set-Cookie': cookie, 'Content-Type': 'application/json' },
-    }
-  );
+export async function POST(request) {
+  const response = NextResponse.json({ success: true, message: 'ออกจากระบบสำเร็จ' });
+  response.cookies.set(AUTH_COOKIE_NAME, '', {
+    ...getAuthCookieOptions(request),
+    maxAge: 0,
+  });
+  return response;
 }
