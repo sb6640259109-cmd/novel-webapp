@@ -79,7 +79,7 @@ export default function Register() {
       try {
         const response = await api.get('/auth/session');
         if (response.data.authenticated) {
-          router.push(['AUTHOR', 'ADMIN'].includes(response.data.user.role) ? '/admin' : '/profile');
+          router.push(response.data.user.role === 'ADMIN' ? '/admin' : response.data.user.role === 'AUTHOR' ? '/' : '/profile');
         }
       } catch (err) {
         // no-op
@@ -106,11 +106,18 @@ export default function Register() {
         username: form.username.trim(),
         email: form.email.trim(),
         password: form.password,
+        termsAccepted: form.agree,
       });
 
       if (response.data.success) {
-        setServerError('');
-        router.push('/profile');
+        if (response.data.requiresEmailConfirmation) {
+          setServerError(response.data.message || 'กรุณายืนยันอีเมลก่อนเข้าสู่ระบบ');
+          setActiveScreen('successScreen');
+        } else {
+          setServerError('');
+          router.replace('/profile');
+          router.refresh();
+        }
       } else {
         setServerError(response.data.message || 'สมัครสมาชิกไม่สำเร็จ');
       }
@@ -128,7 +135,7 @@ export default function Register() {
   return (
     <>
       {activeScreen === 'registerScreen' && (
-        <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-[#203A5F] via-[#355F91] to-[#7397C4] relative overflow-hidden font-sans px-4 py-8 md:p-6">
+        <div className="novellib-auth flex min-h-screen items-center justify-center bg-gradient-to-br from-[#203A5F] via-[#355F91] to-[#7397C4] relative overflow-hidden font-sans px-4 py-8 md:p-6">
 
           {/* Back to home */}
           <Link
@@ -142,10 +149,10 @@ export default function Register() {
           <div className="absolute top-[-80px] left-[-80px] w-[340px] h-[340px] rounded-full bg-white/5 blur-3xl pointer-events-none" />
           <div className="absolute bottom-[-60px] right-[-60px] w-[280px] h-[280px] rounded-full bg-white/5 blur-3xl pointer-events-none" />
 
-          <div className="relative z-10 flex flex-col md:flex-row gap-0 rounded-[22px] md:rounded-[30px] overflow-hidden shadow-[0_30px_90px_rgba(10,28,26,.32)] ring-1 ring-white/20 w-full max-w-[980px] bg-[#FFFFFF] mt-8 md:mt-0">
+          <div className="auth-card relative z-10 mt-8 flex w-full max-w-[1040px] flex-col overflow-hidden rounded-[22px] bg-[#FFFFFF] shadow-[0_30px_90px_rgba(10,28,26,.24)] ring-1 ring-white/20 md:rounded-[30px] lg:mt-0 lg:flex-row">
 
             {/* Left Banner — hidden on mobile */}
-            <div className="w-full md:w-[340px] shrink-0 bg-gradient-to-br from-[#294B73] via-[#355F91] to-[#668AB8] py-12 px-10 flex-col justify-between hidden md:flex relative overflow-hidden">
+            <div className="relative hidden w-full shrink-0 flex-col justify-between overflow-hidden bg-gradient-to-br from-[#294B73] via-[#355F91] to-[#668AB8] px-10 py-12 lg:flex lg:w-[360px]">
               <div>
                 <div className="flex items-center gap-2.5 text-[1.3rem] font-bold text-white mb-10">
                   <NovelLibMark className="w-10 h-10" inverted />
@@ -182,7 +189,7 @@ export default function Register() {
             <div className="flex-1 bg-[#FFFFFF] py-7 px-6 md:py-10 md:px-12 flex flex-col justify-center overflow-y-auto">
 
               {/* Mobile logo + feature strip */}
-              <div className="md:hidden mb-5">
+              <div className="mb-5 lg:hidden">
                 <div className="flex items-center gap-2 mb-4">
                   <NovelLibMark className="w-9 h-9" />
                   <span className="font-bold text-[1.1rem] text-[#3F6FAF]">NovelLib</span>
@@ -251,7 +258,7 @@ export default function Register() {
                 </div>
 
                 {/* Password + Confirm side-by-side on md+ */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+                <div className="mb-3 grid grid-cols-1 gap-3 lg:grid-cols-2">
                   {/* Password */}
                   <div>
                     <label className="text-[.8rem] font-semibold text-[#1B2A41] block mb-1">
@@ -331,10 +338,10 @@ export default function Register() {
                       className="mt-[3px] accent-[#3F6FAF] shrink-0"
                     />
                     <span>
-                      ฉันยอมรับ{' '}
-                      <a href="#terms" className="text-[#3F6FAF] font-semibold no-underline hover:underline">ข้อกำหนดการใช้งาน</a>
+                      ฉันมีอายุอย่างน้อย 13 ปี และยอมรับ{' '}
+                      <Link href="/terms" target="_blank" className="text-[#3F6FAF] font-semibold no-underline hover:underline">กฎการใช้งานทั้งหมด</Link>
                       {' '}และ{' '}
-                      <a href="#privacy" className="text-[#3F6FAF] font-semibold no-underline hover:underline">นโยบายความเป็นส่วนตัว</a>
+                      <Link href="/privacy" target="_blank" className="text-[#3F6FAF] font-semibold no-underline hover:underline">นโยบายความเป็นส่วนตัว</Link>
                     </span>
                   </label>
                   {errors.agree && <p className="text-[.72rem] text-[#EF4444] mt-1 ml-5">{errors.agree}</p>}
@@ -350,7 +357,7 @@ export default function Register() {
                 <button
                   id="register-submit"
                   type="submit"
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || !form.agree}
                   className="w-full py-3 md:py-2.5 rounded-lg bg-[#3F6FAF] text-white border-none text-[.92rem] font-semibold cursor-pointer transition-all duration-200 hover:bg-[#2E568C] hover:shadow-[0_4px_16px_rgba(43,94,171,.35)] active:scale-[.98] mb-3.5 disabled:opacity-70"
                 >
                   {isSubmitting ? 'กำลังสมัครสมาชิก...' : 'สมัครสมาชิกฟรี'}

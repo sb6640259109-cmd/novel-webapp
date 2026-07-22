@@ -11,7 +11,7 @@ export async function GET(_request, { params }) {
 }
 
 export async function PUT(request, { params }) {
-  const user = getAuthUser(request);
+  const user = await getAuthUser(request);
   if (!user) return Response.json({ success: false, message: 'กรุณาเข้าสู่ระบบ' }, { status: 401 });
   if (!hasRole(user, [ROLES.AUTHOR, ROLES.ADMIN])) return Response.json({ success: false, message: 'คุณไม่มีสิทธิ์แก้ไขตอน' }, { status: 403 });
   const { id, chapterId } = await params;
@@ -26,7 +26,7 @@ export async function PUT(request, { params }) {
 }
 
 export async function DELETE(request, { params }) {
-  const user = getAuthUser(request);
+  const user = await getAuthUser(request);
   if (!user) return Response.json({ success: false, message: 'กรุณาเข้าสู่ระบบ' }, { status: 401 });
   if (!hasRole(user, [ROLES.AUTHOR, ROLES.ADMIN])) return Response.json({ success: false, message: 'คุณไม่มีสิทธิ์ลบตอน' }, { status: 403 });
   const { id, chapterId } = await params;

@@ -17,7 +17,7 @@ export default function Login() {
       try {
         const response = await api.get('/auth/session');
         if (response.data.authenticated) {
-          router.replace(['AUTHOR', 'ADMIN'].includes(response.data.user.role) ? '/admin' : '/profile');
+          router.replace('/');
           router.refresh();
         }
       } catch (err) {
@@ -46,13 +46,13 @@ export default function Login() {
       });
 
       if (response.data.success) {
-        router.replace(['AUTHOR', 'ADMIN'].includes(response.data.user.role) ? '/admin' : '/profile');
+        router.replace('/');
         router.refresh();
       } else {
         setServerError(response.data.message || 'เข้าสู่ระบบไม่สำเร็จ');
       }
     } catch (error) {
-      setServerError('ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้');
+      setServerError(error?.response?.data?.message || 'ไม่สามารถเข้าสู่ระบบได้ กรุณาลองอีกครั้ง');
     } finally {
       setIsSubmitting(false);
     }
@@ -61,7 +61,7 @@ export default function Login() {
   return (
     <>
       {activeScreen === 'authScreen' && (
-        <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-[#203A5F] via-[#355F91] to-[#7397C4] relative overflow-hidden font-sans px-4 py-8 md:p-6">
+        <div className="novellib-auth flex min-h-screen items-center justify-center bg-gradient-to-br from-[#203A5F] via-[#355F91] to-[#7397C4] relative overflow-hidden font-sans px-4 py-8 md:p-6">
 
           {/* Back to home — floats above on desktop, inline on mobile top */}
           <Link
@@ -71,10 +71,10 @@ export default function Login() {
             <span className="transition-transform group-hover:-translate-x-0.5">←</span> หน้าหลัก
           </Link>
 
-          <div className="relative z-10 flex flex-col md:flex-row gap-0 rounded-[22px] md:rounded-[30px] overflow-hidden shadow-[0_30px_90px_rgba(10,28,26,.32)] ring-1 ring-white/20 w-full max-w-[900px] bg-[#FFFFFF] mt-8 md:mt-0">
+          <div className="auth-card relative z-10 mt-8 flex w-full max-w-[960px] flex-col overflow-hidden rounded-[22px] bg-[#FFFFFF] shadow-[0_30px_90px_rgba(10,28,26,.24)] ring-1 ring-white/20 md:rounded-[30px] lg:mt-0 lg:flex-row">
 
             {/* Left Banner — hidden on mobile */}
-            <div className="w-full md:w-[360px] shrink-0 bg-gradient-to-br from-[#294B73] via-[#355F91] to-[#668AB8] py-12 px-10 flex-col justify-between hidden md:flex relative overflow-hidden">
+            <div className="relative hidden w-full shrink-0 flex-col justify-between overflow-hidden bg-gradient-to-br from-[#294B73] via-[#355F91] to-[#668AB8] px-10 py-12 lg:flex lg:w-[360px]">
               <div>
                 <div className="flex items-center gap-2.5 text-[1.3rem] font-bold text-white mb-12">
                   <NovelLibMark className="w-10 h-10" inverted />
@@ -94,7 +94,7 @@ export default function Login() {
             <div className="flex-1 bg-[#FFFFFF] py-8 px-6 md:py-12 md:px-12 flex flex-col justify-center">
 
               {/* Mobile logo */}
-              <div className="flex items-center gap-2 md:hidden mb-6">
+              <div className="mb-6 flex items-center gap-2 lg:hidden">
                 <NovelLibMark className="w-9 h-9" />
                 <span className="font-bold text-[1.1rem] text-[#3F6FAF]">NovelLib</span>
               </div>

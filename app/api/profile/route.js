@@ -1,36 +1,21 @@
-import { NextResponse } from 'next/server';
-import prisma from '@/lib/prisma';
+import { findDuplicateUser, findUserById, updateUser } from '@/lib/users';
 import { getAuthUser } from '@/lib/auth';
-import { signToken } from '@/lib/jwt';
-import { AUTH_COOKIE_NAME, getAuthCookieOptions } from '@/lib/cookies';
-
-const publicUserSelect = {
-  id: true,
-  username: true,
-  email: true,
-  role: true,
-  displayName: true,
-  bio: true,
-  avatarUrl: true,
-};
+import { createAuthClient } from '@/lib/supabase-auth';
 
 export async function GET(request) {
-  const sessionUser = getAuthUser(request);
+  const sessionUser = await getAuthUser(request);
   if (!sessionUser) {
     return Response.json({ success: false, message: 'กรุณาเข้าสู่ระบบใหม่' }, { status: 401 });
   }
 
-  const user = await prisma.user.findUnique({
-    where: { id: sessionUser.id },
-    select: publicUserSelect,
-  });
+  const user = await findUserById(sessionUser.id);
   return user
     ? Response.json({ success: true, user })
     : Response.json({ success: false, message: 'ไม่พบบัญชีผู้ใช้' }, { status: 404 });
 }
 
 export async function PUT(request) {
-  const sessionUser = getAuthUser(request);
+  const sessionUser = await getAuthUser(request);
   if (!sessionUser) {
     return Response.json({ success: false, message: 'กรุณาเข้าสู่ระบบใหม่' }, { status: 401 });
   }
@@ -58,28 +43,16 @@ export async function PUT(request) {
       return Response.json({ success: false, message: 'ที่อยู่รูปโปรไฟล์ไม่ถูกต้อง' }, { status: 400 });
     }
 
-    const duplicate = await prisma.user.findFirst({
-      where: { username, NOT: { id: sessionUser.id } },
-      select: { id: true },
-    });
+    const duplicate = await findDuplicateUser({ username, excludeId: sessionUser.id });
     if (duplicate) {
       return Response.json({ success: false, message: 'ชื่อผู้ใช้นี้ถูกใช้แล้ว' }, { status: 409 });
     }
 
-    const user = await prisma.user.update({
-      where: { id: sessionUser.id },
-      data: { username, displayName, bio, avatarUrl },
-      select: { ...publicUserSelect, firebaseUid: true },
-    });
+    const user = await updateUser(sessionUser.id, { username, displayName, bio, avatarUrl });
 
-    const token = signToken({
-      id: user.id,
-      username: user.username,
-      email: user.email,
-      role: user.role,
-      ...(user.firebaseUid ? { firebaseUid: user.firebaseUid } : {}),
-    });
-    const response = NextResponse.json({
+    const supabase = await createAuthClient();
+    await supabase.auth.updateUser({ data: { username: user.username, display_name: user.displayName } });
+    return Response.json({
       success: true,
       message: 'บันทึกข้อมูลเรียบร้อยแล้ว',
       user: {
@@ -87,8 +60,6 @@ export async function PUT(request) {
         displayName: user.displayName, bio: user.bio, avatarUrl: user.avatarUrl,
       },
     });
-    response.cookies.set(AUTH_COOKIE_NAME, token, getAuthCookieOptions(request));
-    return response;
   } catch (error) {
     console.error('Update profile error:', error);
     if (error?.code === 'P2025') {

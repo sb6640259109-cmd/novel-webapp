@@ -2,7 +2,7 @@ import { getAuthUser, hasRole, ROLES } from '@/lib/auth';
 import { moderateNovel } from '@/lib/novels';
 
 export async function PUT(request, { params }) {
-  const admin = getAuthUser(request);
+  const admin = await getAuthUser(request);
   if (!hasRole(admin, [ROLES.ADMIN])) return Response.json({ success: false, message: 'เฉพาะ Admin เท่านั้น' }, { status: 403 });
   const body = await request.json();
   const moderationStatus = String(body.moderationStatus || '').toUpperCase();

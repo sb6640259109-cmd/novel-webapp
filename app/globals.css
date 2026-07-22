@@ -12,6 +12,64 @@
   --line: #dce5f0;
 }
 
+/* Site-wide light/dark appearance selected from Settings. */
+.site-dark {
+  color-scheme: dark;
+  background: #0f172a !important;
+  color: #e2e8f0 !important;
+}
+
+.site-dark main,
+.site-dark nav,
+.site-dark header,
+.site-dark section,
+.site-dark [class~="bg-[#F4F7FB]"],
+.site-dark [class~="bg-[#FFFFFF]"],
+.site-dark [class~="bg-[#FFFFFF]/95"],
+.site-dark .bg-white,
+.site-dark .bg-slate-50,
+.site-dark .bg-gray-50 {
+  background-color: #111827 !important;
+  border-color: #334155 !important;
+}
+
+.site-dark input,
+.site-dark textarea,
+.site-dark select,
+.site-dark button.bg-white {
+  background-color: #1e293b !important;
+  border-color: #475569 !important;
+  color: #e2e8f0 !important;
+}
+
+.site-dark input::placeholder,
+.site-dark textarea::placeholder,
+.site-dark .text-slate-500,
+.site-dark .text-slate-600,
+.site-dark .text-gray-700,
+.site-dark [class~="text-[#64748B]"],
+.site-dark [class~="text-[#8795A8]"] {
+  color: #94a3b8 !important;
+}
+
+.site-dark [class~="text-[#1B2A41]"] {
+  color: #f1f5f9 !important;
+}
+
+.site-dark .border,
+.site-dark [class~="border-[#DCE5F0]"] {
+  border-color: #334155 !important;
+}
+
+.site-dark img {
+  color-scheme: normal;
+}
+
+.site-dark .reader-hero-action {
+  background-color: #ffffff !important;
+  color: #315b8e !important;
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -74,7 +132,8 @@ a {
 button:focus-visible,
 a:focus-visible,
 input:focus-visible,
-textarea:focus-visible {
+textarea:focus-visible,
+select:focus-visible {
   outline: 3px solid rgba(63, 111, 175, .24);
   outline-offset: 2px;
 }
@@ -95,17 +154,13 @@ button:not(:disabled) {
   cursor: pointer;
 }
 
-button:not(:disabled):active {
-  transform: scale(.98);
-}
-
-button[class*="bg-[#3F6FAF]"],
-a[class*="bg-[#3F6FAF]"] {
+button[class~="bg-[#3F6FAF]"],
+a[class~="bg-[#3F6FAF]"] {
   box-shadow: 0 8px 22px rgba(63, 111, 175, .20), inset 0 1px 0 rgba(255, 255, 255, .20);
 }
 
-button[class*="bg-[#3F6FAF]"]:hover,
-a[class*="bg-[#3F6FAF]"]:hover {
+button[class~="bg-[#3F6FAF]"]:hover,
+a[class~="bg-[#3F6FAF]"]:hover {
   box-shadow: 0 12px 28px rgba(63, 111, 175, .28), 0 0 0 4px rgba(111, 150, 201, .10);
 }
 
@@ -135,5 +190,126 @@ body > main {
     animation-duration: .01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: .01ms !important;
+  }
+}
+
+/* Shared layout surfaces. */
+body {
+  font-family: "Segoe UI Variable", "Noto Sans Thai", "Leelawadee UI", ui-sans-serif, system-ui, sans-serif;
+  background-color: var(--background);
+  background-image:
+    radial-gradient(circle at 8% 2%, rgba(111, 150, 201, .12), transparent 24rem),
+    radial-gradient(circle at 92% 96%, rgba(142, 190, 191, .10), transparent 28rem);
+  background-attachment: fixed;
+}
+
+body::before {
+  display: none;
+}
+
+.novellib-shell:not(.site-dark),
+.novellib-admin {
+  background: linear-gradient(145deg, #f8fbff 0%, #f4f7fb 58%, #f7fafc 100%) !important;
+}
+
+.novellib-shell:not(.site-dark) > nav,
+.novellib-shell:not(.site-dark) > main > header {
+  border-color: var(--line) !important;
+  background-color: #ffffff !important;
+}
+
+.novellib-shell:not(.site-dark) input,
+.novellib-shell:not(.site-dark) textarea,
+.novellib-admin input,
+.novellib-admin textarea,
+.novellib-profile input,
+.novellib-profile textarea,
+.novellib-auth input {
+  border-color: var(--line) !important;
+  background-color: #f8fafc !important;
+  background-image: none !important;
+  color: var(--ink) !important;
+}
+
+.novellib-shell:not(.site-dark) input:focus,
+.novellib-shell:not(.site-dark) textarea:focus,
+.novellib-admin input:focus,
+.novellib-admin textarea:focus,
+.novellib-profile input:focus,
+.novellib-profile textarea:focus,
+.novellib-auth input:focus {
+  border-color: #6f96c9 !important;
+  background-color: #ffffff !important;
+  box-shadow: 0 0 0 4px rgba(63, 111, 175, .12) !important;
+}
+
+.novellib-auth,
+.novellib-profile {
+  isolation: isolate;
+  background:
+    radial-gradient(circle at 10% 8%, rgba(126, 189, 191, .17), transparent 25rem),
+    radial-gradient(circle at 92% 12%, rgba(111, 150, 201, .18), transparent 28rem),
+    linear-gradient(145deg, #eef6fb 0%, #f4f7fb 52%, #f8fafc 100%) !important;
+}
+
+.novellib-auth::before,
+.novellib-auth::after,
+.novellib-profile::before,
+.novellib-profile::after {
+  content: none;
+}
+
+.novellib-auth .auth-card {
+  border: 1px solid rgba(220, 229, 240, .9);
+  box-shadow: 0 24px 64px rgba(27, 42, 65, .16) !important;
+}
+
+.novellib-auth .auth-card > div:first-child {
+  background:
+    radial-gradient(circle at 88% 12%, rgba(151, 205, 207, .18), transparent 13rem),
+    linear-gradient(155deg, #294b73 0%, #3f6faf 58%, #577fae 100%) !important;
+}
+
+.novellib-auth > a[href="/"] {
+  color: var(--accent) !important;
+}
+
+.novellib-auth > a[href="/"]:hover {
+  color: var(--accent-dark) !important;
+}
+
+.novellib-profile > div > div:nth-child(2) {
+  border-color: var(--line) !important;
+  background-color: #ffffff !important;
+  background-image: none !important;
+  box-shadow: 0 12px 32px rgba(27, 42, 65, .07);
+  backdrop-filter: none;
+}
+
+.novellib-profile > div > div:first-child p {
+  color: var(--muted) !important;
+}
+
+.novellib-profile > div > div:first-child a[href="/"] {
+  border: 1px solid var(--line);
+  background-color: #ffffff !important;
+  color: var(--accent) !important;
+}
+
+.novellib-admin h1,
+.novellib-profile h1 {
+  background: none;
+  color: var(--ink);
+}
+
+@media (max-width: 767px) {
+  .novellib-auth,
+  .novellib-profile,
+  .novellib-admin {
+    background-attachment: scroll !important;
+  }
+
+  .novellib-auth .auth-card {
+    border-radius: 1.5rem !important;
   }
 }

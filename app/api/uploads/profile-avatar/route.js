@@ -17,7 +17,7 @@ function detectImageType(buffer) {
 }
 
 export async function POST(request) {
-  if (!getAuthUser(request)) {
+  if (!await getAuthUser(request)) {
     return Response.json({ success: false, message: 'กรุณาเข้าสู่ระบบใหม่' }, { status: 401 });
   }
 

@@ -3,7 +3,7 @@ import { listNovels } from '@/lib/novels';
 import { getFavoriteNovelIds, getReadingHistory } from '@/lib/reader-data';
 
 export async function GET(request) {
-  const user = getAuthUser(request);
+  const user = await getAuthUser(request);
   if (!user) return Response.json({ success: false, message: 'กรุณาเข้าสู่ระบบก่อน' }, { status: 401 });
 
   const novels = await listNovels();

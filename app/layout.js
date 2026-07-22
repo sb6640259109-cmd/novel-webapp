@@ -1,27 +1,13 @@
-import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
-
 export const metadata = {
-  title: "NovelLib — ห้องสมุดนิยายของคุณ",
-  description: "ค้นพบ อ่าน และจัดเก็บนิยายเรื่องโปรดไว้ในที่เดียว",
+  title: "NovelLib — โลกนิยายที่เป็นของคุณ",
+  description: "ค้นพบ อ่าน และจัดเก็บนิยายเรื่องโปรดในพื้นที่อ่านที่สดใสและทันสมัย",
 };
 
 export default function RootLayout({ children }) {
   return (
-    <html
-      lang="th"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-    >
+    <html lang="th" className="h-full antialiased">
       <body className="min-h-full flex flex-col">{children}</body>
     </html>
   );

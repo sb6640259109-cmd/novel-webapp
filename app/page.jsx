@@ -3,6 +3,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
 import api from '@/lib/axios-client';
 import NovelLibMark from '@/app/components/NovelLibMark';
+import SettingsPanel from '@/app/components/SettingsPanel';
 
 function NovelManagementIcon({ className = 'w-5 h-5' }) {
   return (
@@ -37,7 +38,8 @@ export default function Homepage() {
   const [libraryError, setLibraryError] = useState('');
   const [featuredIndex, setFeaturedIndex] = useState(0);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
-  const [readerFontSize, setReaderFontSize] = useState(16);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [readerFontSize, setReaderFontSize] = useState(18);
   const [readerTheme, setReaderTheme] = useState('light');
   const canManageNovels = currentUser?.role === 'AUTHOR' || currentUser?.role === 'ADMIN';
   const managementLabel = currentUser?.role === 'ADMIN' ? 'ดูแลระบบ' : 'จัดการนิยาย';
@@ -91,10 +93,26 @@ export default function Homepage() {
   }, []);
 
   useEffect(() => {
+    if (!mobileMenuOpen && !notificationsOpen && !isDetailOpen) return;
+    const closeOverlay = (event) => {
+      if (event.key !== 'Escape') return;
+      if (isDetailOpen) {
+        setIsDetailOpen(false);
+        setSelectedNovel(null);
+        return;
+      }
+      if (mobileMenuOpen) setMobileMenuOpen(false);
+      if (notificationsOpen) setNotificationsOpen(false);
+    };
+    window.addEventListener('keydown', closeOverlay);
+    return () => window.removeEventListener('keydown', closeOverlay);
+  }, [isDetailOpen, mobileMenuOpen, notificationsOpen]);
+
+  useEffect(() => {
     const timer = window.setTimeout(() => {
       const savedSize = Number(window.localStorage.getItem('readerFontSize'));
       const savedTheme = window.localStorage.getItem('readerTheme');
-      if ([14, 16, 18].includes(savedSize)) setReaderFontSize(savedSize);
+      if ([18, 24, 28].includes(savedSize)) setReaderFontSize(savedSize);
       if (savedTheme === 'dark' || savedTheme === 'light') setReaderTheme(savedTheme);
     }, 0);
     return () => window.clearTimeout(timer);
@@ -190,36 +208,45 @@ export default function Homepage() {
   };
 
   return (
-    <div className="flex h-screen bg-[#F4F7FB] text-[#1B2A41] font-sans text-[15px] overflow-hidden selection:bg-[#3F6FAF]/20">
+    <div className={`novellib-shell novellib-home flex h-[100dvh] min-h-[100dvh] overflow-hidden bg-[#F4F7FB] font-sans text-[15px] text-[#1B2A41] selection:bg-[#3F6FAF]/20 ${readerTheme === 'dark' ? 'site-dark' : 'site-light'}`}>
 
       {/* ── SIDEBAR (Desktop) ── */}
-      <nav className="w-[248px] shrink-0 bg-[#FFFFFF]/95 border-r border-[#DCE5F0] py-7 h-screen flex-col hidden md:flex z-20 shadow-[12px_0_40px_rgba(23,32,42,.035)] backdrop-blur-xl">
-        <div className="flex items-center gap-[9px] px-5 pb-7 font-bold text-[1.1rem] text-[#3F6FAF]">
+      <nav aria-label="เมนูหลัก" className="z-20 hidden h-[100dvh] w-[264px] shrink-0 flex-col border-r border-[#DCE5F0] bg-[#FFFFFF]/95 py-6 shadow-[12px_0_40px_rgba(23,32,42,.035)] backdrop-blur-xl lg:flex">
+        <div className="flex items-center gap-2.5 px-6 pb-8 text-[1.15rem] font-bold text-[#3F6FAF]">
           <NovelLibMark className="w-[34px] h-[34px]" />
           NovelLib
         </div>
-        <div className="px-3 mb-1.5">
-          <div className="text-[.68rem] font-semibold tracking-[.06em] text-[#8795A8] uppercase px-2 pb-1.5">เมนูหลัก</div>
-          <a href="#discover" className="flex items-center gap-2.5 py-[9px] px-2.5 rounded-lg text-[.88rem] transition-all duration-150 no-underline bg-[#E8F0FA] text-[#3F6FAF] font-semibold">
-            <span className="text-base w-5 text-center">🧭</span> ค้นพบ
+        <div className="mb-1.5 px-3">
+          <div className="px-3 pb-2 text-[.68rem] font-semibold uppercase tracking-[.08em] text-[#64748B]">เมนูหลัก</div>
+          <a href="#discover" aria-current={activeView === 'discover' ? 'page' : undefined} className={`flex min-h-11 items-center gap-3 rounded-xl px-3 text-[.9rem] no-underline transition-colors ${activeView === 'discover' ? 'bg-[#E8F0FA] font-semibold text-[#3F6FAF]' : 'font-medium text-[#64748B] hover:bg-[#F4F7FB] hover:text-[#3F6FAF]'}`}>
+            <span aria-hidden="true" className="w-5 text-center text-base">🧭</span> ค้นพบ
           </a>
-          <a href="#library" className="flex items-center gap-2.5 py-[9px] px-2.5 rounded-lg text-[.88rem] font-medium text-[#64748B] transition-all duration-150 no-underline hover:bg-[#E8F0FA] hover:text-[#3F6FAF]">
-            <span className="text-base w-5 text-center">📖</span> ชั้นหนังสือ
+          <a href="#library" aria-current={activeView === 'library' ? 'page' : undefined} className={`mt-1 flex min-h-11 items-center gap-3 rounded-xl px-3 text-[.9rem] no-underline transition-colors ${activeView === 'library' ? 'bg-[#E8F0FA] font-semibold text-[#3F6FAF]' : 'font-medium text-[#64748B] hover:bg-[#F4F7FB] hover:text-[#3F6FAF]'}`}>
+            <span aria-hidden="true" className="w-5 text-center text-base">📖</span> ชั้นหนังสือ
           </a>
-          <a href="#updates" className="flex items-center gap-2.5 py-[9px] px-2.5 rounded-lg text-[.88rem] font-medium text-[#64748B] transition-all duration-150 no-underline hover:bg-[#E8F0FA] hover:text-[#3F6FAF]">
-            <span className="text-base w-5 text-center">✨</span> อัปเดต
-            <span className="ml-auto bg-[#3F6FAF] text-white text-[.68rem] font-bold py-[2px] px-[7px] rounded-full">3</span>
-          </a>
-          {canManageNovels && <a href="/admin" className="mt-1 flex items-center gap-2.5 py-[9px] px-2.5 rounded-lg text-[.88rem] font-semibold text-[#3F6FAF] transition-all duration-150 no-underline bg-[#E8F0FA]/70 hover:bg-[#DCE9F8]">
+          {canManageNovels && <a href="/admin" className="mt-1 flex min-h-11 items-center gap-3 rounded-xl px-3 text-[.9rem] font-semibold text-[#3F6FAF] no-underline transition-colors hover:bg-[#E8F0FA]">
             <span className="w-5 grid place-items-center"><NovelManagementIcon /></span> {managementLabel}
           </a>}
         </div>
-        <div className="mt-auto pt-4 px-5 border-t border-[#DCE5F0]">
-          <a href={currentUser ? '/profile' : '/login'} className="flex items-center gap-2.5 py-2.5 hover:bg-gray-50 rounded-lg px-2 no-underline text-inherit">
-            <div className="w-[34px] h-[34px] rounded-full bg-gradient-to-br from-[#667eea] to-[#764ba2] grid place-items-center text-white font-bold text-[.9rem] shrink-0">{accountLabel.charAt(0).toUpperCase()}</div>
+        {currentUser?.role === 'READER' && <a href="/author-apply" className="group mx-4 mt-5 block overflow-hidden rounded-2xl bg-[#203A5F] p-4 text-white no-underline shadow-[0_12px_28px_rgba(32,58,95,.2)] transition-transform hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6F96C9]">
+          <div className="flex items-start justify-between gap-3">
+            <div><p className="text-[.65rem] font-bold uppercase tracking-[.12em] text-[#AFC8E8]">พื้นที่ของนักเล่าเรื่อง</p><p className="mt-1.5 text-base font-bold">อยากเขียนเรื่องของคุณ?</p></div>
+            <span aria-hidden="true" className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-white/10 text-lg">✍</span>
+          </div>
+          <p className="mt-2 text-xs leading-relaxed text-white/70">สมัครเป็นนักเขียน แล้วเริ่มจัดการนิยายและตอนของคุณได้ในที่เดียว</p>
+          <span className="mt-3 inline-flex items-center gap-1 text-xs font-bold text-white">เริ่มสมัครนักเขียน <span className="transition-transform group-hover:translate-x-1">→</span></span>
+        </a>}
+        <div className="mx-4 mt-6 rounded-2xl border border-[#DCE5F0] bg-[#F7FAFD] p-4">
+          <p className="text-[.68rem] font-bold uppercase tracking-[.08em] text-[#3F6FAF]">คลังนิยาย</p>
+          <p className="mt-2 text-sm font-semibold text-[#1B2A41]">{loading ? 'กำลังเตรียมเรื่องน่าอ่าน' : `${novels.length} เรื่องพร้อมให้ค้นพบ`}</p>
+          <p className="mt-1 text-xs leading-relaxed text-[#64748B]">เลือกประเภทที่ชอบ แล้วเก็บเรื่องโปรดไว้ในชั้นหนังสือของคุณ</p>
+        </div>
+        <div className="mt-auto border-t border-[#DCE5F0] px-4 pt-4">
+          <a href={currentUser ? '/profile' : '/login'} className="flex min-h-14 items-center gap-3 rounded-xl px-2.5 no-underline text-inherit hover:bg-[#F4F7FB]">
+            <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-gradient-to-br from-[#3F6FAF] to-[#6F96C9] text-[.9rem] font-bold text-white">{accountLabel.charAt(0).toUpperCase()}</div>
             <div className="leading-tight">
-              <div className="text-[.85rem] font-semibold">{accountLabel}</div>
-              <div className="text-[.72rem] text-[#8795A8]">{currentUser ? roleLabel : 'เข้าสู่ระบบ'}</div>
+              <div className="text-[.88rem] font-semibold">{accountLabel}</div>
+              <div className="mt-1 text-xs text-[#64748B]">{currentUser ? roleLabel : 'เข้าสู่ระบบ'}</div>
             </div>
           </a>
         </div>
@@ -228,7 +255,11 @@ export default function Homepage() {
       {/* ── MOBILE SIDEBAR OVERLAY ── */}
       {/* Always rendered, controlled via CSS transform + pointer-events */}
       <div
-        className="fixed inset-0 z-[300] transition-all duration-300"
+        role="dialog"
+        aria-modal="true"
+        aria-label="เมนูนำทาง"
+        aria-hidden={!mobileMenuOpen}
+        className="fixed inset-0 z-[300] transition-all duration-300 lg:hidden"
         style={{
           pointerEvents: mobileMenuOpen ? 'auto' : 'none',
           visibility: mobileMenuOpen ? 'visible' : 'hidden',
@@ -242,7 +273,8 @@ export default function Homepage() {
         />
         {/* Drawer */}
         <nav
-          className="absolute left-0 top-0 bottom-0 w-[270px] bg-white flex flex-col py-6 shadow-2xl transition-transform duration-300"
+          aria-label="เมนูหลักบนมือถือ"
+          className="absolute bottom-0 left-0 top-0 flex w-[min(86vw,320px)] flex-col bg-white py-6 shadow-2xl transition-transform duration-300"
           style={{ transform: mobileMenuOpen ? 'translateX(0)' : 'translateX(-100%)' }}
         >
           <div className="flex items-center justify-between px-5 pb-6">
@@ -253,6 +285,7 @@ export default function Homepage() {
             <button
               type="button"
               onClick={() => setMobileMenuOpen(false)}
+              aria-label="ปิดเมนู"
               className="w-9 h-9 flex items-center justify-center text-[#8795A8] text-xl border-none bg-transparent cursor-pointer rounded-lg hover:bg-gray-100"
             >
               ✕
@@ -261,30 +294,30 @@ export default function Homepage() {
 
           <div className="px-3 mb-1.5 flex-1">
             <div className="text-[.68rem] font-semibold tracking-[.06em] text-[#8795A8] uppercase px-2 pb-1.5">เมนูหลัก</div>
-            <a href="#discover" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2.5 py-3 px-2.5 rounded-lg text-[.9rem] no-underline bg-[#E8F0FA] text-[#3F6FAF] font-semibold mb-1">
+            <a href="#discover" aria-current={activeView === 'discover' ? 'page' : undefined} onClick={() => setMobileMenuOpen(false)} className={`mb-1 flex min-h-12 items-center gap-3 rounded-xl px-3 text-[.9rem] no-underline ${activeView === 'discover' ? 'bg-[#E8F0FA] font-semibold text-[#3F6FAF]' : 'font-medium text-[#64748B] hover:bg-[#F4F7FB]'}`}>
               <span className="text-base w-5 text-center">🧭</span> ค้นพบ
             </a>
-            <a href="#library" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2.5 py-3 px-2.5 rounded-lg text-[.9rem] font-medium text-[#64748B] no-underline hover:bg-[#E8F0FA] hover:text-[#3F6FAF] mb-1">
+            <a href="#library" aria-current={activeView === 'library' ? 'page' : undefined} onClick={() => setMobileMenuOpen(false)} className={`mb-1 flex min-h-12 items-center gap-3 rounded-xl px-3 text-[.9rem] no-underline ${activeView === 'library' ? 'bg-[#E8F0FA] font-semibold text-[#3F6FAF]' : 'font-medium text-[#64748B] hover:bg-[#F4F7FB]'}`}>
               <span className="text-base w-5 text-center">📖</span> ชั้นหนังสือ
-            </a>
-            <a href="#updates" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2.5 py-3 px-2.5 rounded-lg text-[.9rem] font-medium text-[#64748B] no-underline hover:bg-[#E8F0FA] hover:text-[#3F6FAF]">
-              <span className="text-base w-5 text-center">✨</span> อัปเดต
-              <span className="ml-auto bg-[#3F6FAF] text-white text-[.68rem] font-bold py-[2px] px-[7px] rounded-full">3</span>
             </a>
             {canManageNovels && <a href="/admin" onClick={() => setMobileMenuOpen(false)} className="mt-1 flex items-center gap-2.5 py-3 px-2.5 rounded-lg text-[.9rem] font-semibold text-[#3F6FAF] no-underline bg-[#E8F0FA]/70 hover:bg-[#DCE9F8]">
               <span className="w-5 grid place-items-center"><NovelManagementIcon /></span> {managementLabel}
             </a>}
+            {currentUser?.role === 'READER' && <a href="/author-apply" onClick={() => setMobileMenuOpen(false)} className="mt-4 block rounded-2xl bg-[#203A5F] p-4 text-white no-underline shadow-lg">
+              <div className="flex items-center gap-3"><span className="grid h-10 w-10 place-items-center rounded-xl bg-white/10 text-xl">✍</span><div><p className="font-bold">เขียนเรื่องของคุณ</p><p className="mt-0.5 text-xs text-white/70">สมัครเป็นนักเขียนกับ NovelLib</p></div></div>
+              <span className="mt-3 block rounded-lg bg-white px-3 py-2 text-center text-sm font-bold text-[#203A5F]">เริ่มสมัครนักเขียน</span>
+            </a>}
           </div>
 
-          <div className="px-5 pt-4 border-t border-[#DCE5F0]">
-            <div className="flex gap-2">
+          <div className="border-t border-[#DCE5F0] px-5 pt-4">
+            {currentUser ? <a href="/profile" className="flex min-h-12 items-center justify-center rounded-xl border border-[#DCE5F0] bg-white px-4 text-sm font-semibold text-[#3F6FAF] no-underline">ดูโปรไฟล์ {accountLabel}</a> : <div className="flex gap-2">
               <a href="/login" className="flex-1 text-center py-2.5 rounded-lg border border-[#DCE5F0] text-[.84rem] font-semibold text-[#64748B] no-underline hover:border-[#3F6FAF] hover:text-[#3F6FAF]">
                 เข้าสู่ระบบ
               </a>
               <a href="/register" className="flex-1 text-center py-2.5 rounded-lg bg-[#3F6FAF] text-white text-[.84rem] font-semibold no-underline hover:bg-[#2E568C]">
                 สมัครสมาชิก
               </a>
-            </div>
+            </div>}
           </div>
         </nav>
       </div>
@@ -293,34 +326,38 @@ export default function Homepage() {
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
 
         {/* TOP BAR */}
-        <header className="bg-[#FFFFFF]/90 border-b border-[#DCE5F0] py-3 px-4 md:py-[16px] md:px-8 flex items-center gap-3 shrink-0 z-10 backdrop-blur-xl">
+        <header className="z-30 flex min-h-[68px] shrink-0 items-center gap-3 border-b border-[#DCE5F0] bg-[#FFFFFF]/95 px-4 py-3 backdrop-blur-xl sm:px-6 lg:px-8">
 
           {/* Hamburger — mobile only */}
           <button
             type="button"
-            className="md:hidden flex items-center justify-center w-11 h-11 -ml-2 rounded-xl text-[#1B2A41] text-[1.4rem] cursor-pointer border-none bg-transparent active:bg-gray-100"
+            className="-ml-2 flex h-11 w-11 items-center justify-center rounded-xl border-none bg-transparent text-[1.4rem] text-[#1B2A41] active:bg-gray-100 lg:hidden"
             onClick={() => setMobileMenuOpen(true)}
             aria-label="เปิดเมนู"
           >
             ☰
           </button>
 
-          <div className="text-[.95rem] md:text-[1.05rem] font-bold text-[#1B2A41] truncate">ค้นพบ</div>
+          <div className="min-w-0 shrink-0">
+            <h1 className="truncate text-base font-bold text-[#1B2A41] sm:text-lg">{activeView === 'library' ? 'ชั้นหนังสือของฉัน' : 'ค้นพบนิยาย'}</h1>
+            <p className="hidden text-xs text-[#64748B] lg:block">{activeView === 'library' ? 'เรื่องโปรดและประวัติการอ่านของคุณ' : 'เรื่องใหม่และเรื่องแนะนำที่คัดมาให้คุณ'}</p>
+          </div>
 
           {/* Search — hidden on small mobile */}
-          <div className="flex-1 max-w-[320px] relative hidden sm:block">
+          <div className="relative ml-2 hidden max-w-md flex-1 sm:block lg:ml-6">
             <span className="absolute left-[11px] top-1/2 -translate-y-1/2 text-[#8795A8] text-[.9rem] pointer-events-none">🔍</span>
             <input
               type="text"
               value={search}
               onChange={(event) => setSearch(event.target.value)}
+              aria-label="ค้นหานิยายหรือนักเขียน"
               placeholder="ค้นหานิยาย, นักเขียน..."
-              className="w-full py-2 pr-[14px] pl-[36px] border border-[#DCE5F0] rounded-lg text-[.87rem] bg-[#F4F7FB] text-[#1B2A41] outline-none transition-colors focus:border-[#6F96C9] focus:bg-white"
+              className="w-full rounded-xl border border-[#DCE5F0] bg-[#F4F7FB] py-2.5 pl-[38px] pr-4 text-[.87rem] text-[#1B2A41] outline-none transition-colors focus:border-[#6F96C9] focus:bg-white"
             />
           </div>
 
           <div className="ml-auto flex items-center gap-1.5 relative">
-            {canManageNovels && <a href="/admin" title={managementLabel} aria-label={managementLabel} className="inline-flex w-[34px] h-[34px] rounded-lg border border-[#AFC8E8] bg-[#E8F0FA] items-center justify-center text-[#3F6FAF] no-underline transition-all hover:bg-[#D5E4F6] hover:border-[#6F96C9]"><NovelManagementIcon /></a>}
+            {canManageNovels && <a href="/admin" title={managementLabel} aria-label={managementLabel} className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-[#AFC8E8] bg-[#E8F0FA] text-[#3F6FAF] no-underline transition-all hover:border-[#6F96C9] hover:bg-[#D5E4F6]"><NovelManagementIcon /></a>}
             {currentUser ? <a href="/profile" className="hidden sm:inline-flex py-1.5 px-3 rounded-lg border border-[#DCE5F0] bg-white text-[.8rem] font-semibold text-[#64748B] no-underline transition-all hover:border-[#3F6FAF] hover:text-[#3F6FAF] hover:bg-[#E8F0FA]">
               {accountLabel}
             </a> : <><a href="/login" className="hidden sm:inline-flex py-1.5 px-3 rounded-lg border border-[#DCE5F0] bg-white text-[.8rem] font-semibold text-[#64748B] no-underline transition-all hover:border-[#3F6FAF] hover:text-[#3F6FAF] hover:bg-[#E8F0FA]">
@@ -331,15 +368,15 @@ export default function Homepage() {
             </a>
             </>}
             <div className="hidden sm:block w-px h-5 bg-[#DCE5F0] mx-0.5" />
-            <button type="button" onClick={() => setNotificationsOpen((open) => !open)} aria-label="การแจ้งเตือน" aria-expanded={notificationsOpen} className={`w-[34px] h-[34px] rounded-lg border grid place-items-center cursor-pointer text-[.9rem] transition-all hover:bg-[#E8F0FA] hover:text-[#3F6FAF] hover:border-[#6F96C9] ${notificationsOpen ? 'border-[#6F96C9] bg-[#E8F0FA] text-[#3F6FAF]' : 'border-[#DCE5F0] bg-white text-[#64748B]'}`}>🔔</button>
-            <a href={currentUser ? '/profile' : '/login'} aria-label="ตั้งค่าบัญชี" title="ตั้งค่าบัญชี" className="hidden sm:grid w-[34px] h-[34px] rounded-lg border border-[#DCE5F0] bg-white place-items-center text-[.9rem] text-[#64748B] no-underline transition-all hover:bg-[#E8F0FA] hover:text-[#3F6FAF] hover:border-[#6F96C9]">⚙️</a>
-            {notificationsOpen && <div className="absolute right-0 top-11 z-50 w-[290px] overflow-hidden rounded-xl border border-[#DCE5F0] bg-white shadow-[0_16px_40px_rgba(27,42,65,.16)]">
+            <button type="button" onClick={() => setNotificationsOpen((open) => !open)} aria-label="การแจ้งเตือน" aria-expanded={notificationsOpen} className={`grid h-10 w-10 place-items-center rounded-xl border text-[.9rem] transition-all hover:border-[#6F96C9] hover:bg-[#E8F0FA] hover:text-[#3F6FAF] ${notificationsOpen ? 'border-[#6F96C9] bg-[#E8F0FA] text-[#3F6FAF]' : 'border-[#DCE5F0] bg-white text-[#64748B]'}`}>🔔</button>
+            <button type="button" onClick={() => setSettingsOpen(true)} aria-label="เปิดการตั้งค่า" title="ตั้งค่า" className="grid h-10 w-10 place-items-center rounded-xl border border-[#DCE5F0] bg-white text-[.9rem] text-[#64748B] transition-all hover:border-[#6F96C9] hover:bg-[#E8F0FA] hover:text-[#3F6FAF]">⚙️</button>
+            {notificationsOpen && <div className="absolute right-0 top-12 z-50 w-[min(290px,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-[#DCE5F0] bg-white shadow-[0_16px_40px_rgba(27,42,65,.16)]">
               <div className="flex items-center justify-between border-b border-[#E8EEF6] px-4 py-3">
                 <span className="font-bold text-[#1B2A41]">การแจ้งเตือน</span>
                 <button type="button" onClick={() => setNotificationsOpen(false)} aria-label="ปิดการแจ้งเตือน" className="border-0 bg-transparent text-[#8795A8] cursor-pointer">✕</button>
               </div>
               {currentUser ? <div className="p-3">
-                <a href="#updates" onClick={() => setNotificationsOpen(false)} className="block rounded-lg bg-[#F4F7FB] p-3 text-sm text-[#1B2A41] no-underline hover:bg-[#E8F0FA]">
+                <a href="#latest" onClick={() => setNotificationsOpen(false)} className="block rounded-lg bg-[#F4F7FB] p-3 text-sm text-[#1B2A41] no-underline hover:bg-[#E8F0FA]">
                   <span className="font-semibold">ตรวจสอบนิยายอัปเดตล่าสุด</span>
                   <span className="mt-1 block text-xs text-[#8795A8]">มีรายการอัปเดตใหม่ในระบบ</span>
                 </a>
@@ -352,77 +389,96 @@ export default function Homepage() {
         </header>
 
         {/* Mobile search bar */}
-        <div className="sm:hidden px-4 py-2.5 bg-white border-b border-[#DCE5F0] shrink-0">
+        <div className="shrink-0 border-b border-[#DCE5F0] bg-white px-4 py-3 sm:hidden">
           <div className="relative">
             <span className="absolute left-[11px] top-1/2 -translate-y-1/2 text-[#8795A8] text-[.9rem] pointer-events-none">🔍</span>
             <input
               type="text"
               value={search}
               onChange={(event) => setSearch(event.target.value)}
+              aria-label="ค้นหานิยาย"
               placeholder="ค้นหานิยาย..."
-              className="w-full py-2 pr-[14px] pl-[36px] border border-[#DCE5F0] rounded-lg text-[.87rem] bg-[#F4F7FB] text-[#1B2A41] outline-none transition-colors focus:border-[#6F96C9] focus:bg-white"
+              className="w-full rounded-xl border border-[#DCE5F0] bg-[#F4F7FB] py-2.5 pl-[38px] pr-4 text-[.87rem] text-[#1B2A41] outline-none transition-colors focus:border-[#6F96C9] focus:bg-white"
             />
           </div>
         </div>
 
         {/* Scrollable content area */}
         <div className="flex-1 overflow-y-auto">
-          <div className="p-4 md:p-8 lg:p-10 pb-24 md:pb-10 max-w-[1440px] w-full mx-auto">
+          <div className="mx-auto w-full max-w-[1280px] px-4 pb-28 pt-5 sm:px-6 sm:pt-7 lg:px-8 lg:pb-12 xl:px-10">
 
             {/* FEATURED BANNER */}
-            {activeView === 'discover' && <div className="relative mb-7 md:mb-10">
-              <div className="relative h-[250px] overflow-hidden rounded-[22px] bg-gradient-to-br from-[#315b8e] via-[#5f88b6] to-[#9bb8d8] shadow-[0_16px_45px_rgba(31,49,45,.13)] ring-1 ring-white/20 md:h-[340px] md:rounded-[30px]">
+            {activeView === 'discover' && <section id="discover" aria-labelledby="featured-title" className="mb-8 grid gap-5 xl:grid-cols-[minmax(0,1.65fr)_minmax(280px,.75fr)] xl:items-stretch">
+              <div className="relative h-[270px] overflow-hidden rounded-[24px] bg-gradient-to-br from-[#315b8e] via-[#5f88b6] to-[#9bb8d8] shadow-[0_18px_48px_rgba(31,49,45,.16)] ring-1 ring-white/20 sm:h-[330px] xl:h-[410px] xl:rounded-[30px]">
                 {featuredNovel?.image && <div className="absolute inset-y-0 right-0 w-[52%] md:w-[45%]">
-                  <Image src={featuredNovel.image} alt={`หน้าปกนิยาย ${featuredNovel.title}`} fill unoptimized priority className="object-cover" />
+                  <Image src={featuredNovel.image} alt={`หน้าปกนิยาย ${featuredNovel.title}`} fill unoptimized priority loading="eager" className="object-cover" />
                   <div className="absolute inset-0 bg-gradient-to-r from-[#315b8e]/45 via-[#315b8e]/10 to-transparent" />
                 </div>}
-                <div className="absolute inset-0 bg-gradient-to-r from-[#203A5F]/75 via-[#315b8e]/40 to-transparent" />
-                <div className="relative z-10 flex h-full max-w-[72%] flex-col justify-end px-6 py-7 md:max-w-[66%] md:px-10 md:py-10">
+                <div className="absolute inset-0 bg-gradient-to-r from-[#203A5F]/90 via-[#315b8e]/55 to-[#315b8e]/10" />
+                <div className="relative z-10 flex h-full max-w-[88%] flex-col justify-end px-6 py-7 sm:max-w-[70%] sm:px-9 sm:py-9 xl:max-w-[68%] xl:px-11 xl:py-11">
                   <p className="mb-2 text-[.68rem] font-bold uppercase tracking-[.16em] text-[#8ED8F0] md:text-[.74rem]">แนะนำสำหรับคุณ • {featuredIndex + 1}/{featuredNovels.length || 1}</p>
-                  <h2 className="mb-3 line-clamp-2 font-serif text-2xl font-semibold leading-tight text-white md:text-5xl">{featuredNovel?.title || 'กำลังโหลดนิยายแนะนำ...'}</h2>
-                  {featuredNovel && <><div className="mb-4 flex flex-wrap items-center gap-3"><span className="rounded-full bg-white/15 px-3 py-1 text-xs font-medium text-white/90">{featuredNovel.genre}</span><span className="text-sm font-semibold text-[#FBBF24]">★ {Number(featuredNovel.rating).toFixed(1)}</span><span className="hidden text-sm text-white/70 sm:inline">{featuredNovel.author}</span></div><button type="button" onClick={() => openDetail(featuredNovel)} className="inline-flex w-fit items-center gap-2 rounded-lg bg-[#3F6FAF] px-5 py-2.5 text-sm font-semibold text-white shadow hover:bg-[#2E568C]"><span>📖</span> ดูรายละเอียด</button></>}
+                  <h2 id="featured-title" className="mb-3 line-clamp-2 font-serif text-3xl font-semibold leading-[1.08] text-white sm:text-4xl xl:text-5xl">{featuredNovel?.title || 'กำลังโหลดนิยายแนะนำ...'}</h2>
+                  {featuredNovel && <><div className="mb-5 flex flex-wrap items-center gap-3"><span className="rounded-full border border-white/15 bg-white/15 px-3 py-1 text-xs font-medium text-white/90">{featuredNovel.genre}</span><span className="text-sm font-semibold text-[#FBBF24]">★ {Number(featuredNovel.rating).toFixed(1)}</span><span className="hidden text-sm text-white/75 sm:inline">{featuredNovel.author}</span></div><button type="button" onClick={() => openDetail(featuredNovel)} className="reader-hero-action inline-flex min-h-11 w-fit items-center gap-2 rounded-xl bg-white px-5 py-2.5 text-sm font-bold text-[#315B8E] shadow-lg hover:bg-[#F4F7FB]"><span aria-hidden="true">📖</span> ดูรายละเอียด</button></>}
                 </div>
-                {featuredNovels.length > 1 && <><button type="button" aria-label="เรื่องแนะนำก่อนหน้า" onClick={() => setFeaturedIndex((old) => (old - 1 + featuredNovels.length) % featuredNovels.length)} className="absolute left-2 top-1/2 z-20 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-black/25 text-xl text-white backdrop-blur hover:bg-black/40 md:left-4">‹</button><button type="button" aria-label="เรื่องแนะนำถัดไป" onClick={() => setFeaturedIndex((old) => (old + 1) % featuredNovels.length)} className="absolute right-2 top-1/2 z-20 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-black/25 text-xl text-white backdrop-blur hover:bg-black/40 md:right-4">›</button></>}
-                <div className="absolute bottom-3 left-1/2 z-20 flex -translate-x-1/2 gap-1.5">{featuredNovels.map((novel, index) => <button key={novel.id} type="button" aria-label={`แสดง ${novel.title}`} onClick={() => setFeaturedIndex(index)} className={`h-2 rounded-full transition-all ${index === featuredIndex ? 'w-7 bg-white' : 'w-2 bg-white/45 hover:bg-white/70'}`} />)}</div>
+                {featuredNovels.length > 1 && <div className="absolute right-4 top-4 z-20 flex gap-2"><button type="button" aria-label="เรื่องแนะนำก่อนหน้า" onClick={() => setFeaturedIndex((old) => (old - 1 + featuredNovels.length) % featuredNovels.length)} className="grid h-11 w-11 place-items-center rounded-full border border-white/20 bg-black/20 text-2xl text-white backdrop-blur hover:bg-black/35">‹</button><button type="button" aria-label="เรื่องแนะนำถัดไป" onClick={() => setFeaturedIndex((old) => (old + 1) % featuredNovels.length)} className="grid h-11 w-11 place-items-center rounded-full border border-white/20 bg-black/20 text-2xl text-white backdrop-blur hover:bg-black/35">›</button></div>}
+                <div className="absolute bottom-2 left-1/2 z-20 flex -translate-x-1/2">{featuredNovels.map((novel, index) => <button key={novel.id} type="button" aria-label={`แสดง ${novel.title}`} onClick={() => setFeaturedIndex(index)} className="grid h-11 w-11 place-items-center"><span className={`block h-2 rounded-full transition-all ${index === featuredIndex ? 'w-7 bg-white' : 'w-2 bg-white/45'}`} /></button>)}</div>
               </div>
-            </div>}
+              <aside className="hidden flex-col rounded-[28px] border border-[#DCE5F0] bg-white p-7 shadow-[0_14px_38px_rgba(27,42,65,.07)] xl:flex">
+                <p className="text-xs font-bold uppercase tracking-[.14em] text-[#3F6FAF]">พื้นที่ของนักอ่าน</p>
+                <h2 className="mt-3 text-2xl font-bold leading-tight text-[#1B2A41]">เลือกเรื่องที่ใช่ แล้วอ่านต่อได้ทุกเวลา</h2>
+                <p className="mt-3 text-sm leading-6 text-[#64748B]">ค้นหาตามประเภท บันทึกเรื่องโปรด และกลับมาอ่านต่อจากประวัติของคุณได้ง่ายขึ้น</p>
+                <dl className="mt-7 grid grid-cols-2 gap-3">
+                  <div className="rounded-2xl bg-[#F4F7FB] p-4"><dt className="text-xs text-[#64748B]">นิยายทั้งหมด</dt><dd className="mt-1 text-2xl font-bold text-[#1B2A41]">{loading ? '—' : novels.length}</dd></div>
+                  <div className="rounded-2xl bg-[#F4F7FB] p-4"><dt className="text-xs text-[#64748B]">ประเภทให้เลือก</dt><dd className="mt-1 text-2xl font-bold text-[#1B2A41]">{Math.max(genres.length - 1, 0)}</dd></div>
+                </dl>
+                <div className="mt-auto space-y-3 pt-7">
+                  <a href="#library" className="flex min-h-11 items-center justify-center rounded-xl bg-[#3F6FAF] px-4 text-sm font-bold text-white no-underline hover:bg-[#2E568C]">เปิดชั้นหนังสือของฉัน</a>
+                  <p className="text-center text-xs text-[#64748B]">{currentUser ? `เข้าสู่ระบบเป็น ${accountLabel}` : 'เข้าสู่ระบบเพื่อบันทึกเรื่องโปรดและประวัติการอ่าน'}</p>
+                </div>
+              </aside>
+            </section>}
 
+            <section id={activeView === 'library' ? 'library' : 'latest'} aria-labelledby="novel-list-title">
             {/* SECTION & TABS */}
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-[.95rem] md:text-base font-bold">{activeView === 'library' ? 'ชั้นหนังสือของฉัน' : 'อัปเดตล่าสุด'}</h3>
-              <a href="#all" className="text-[.8rem] text-[#3F6FAF] font-semibold cursor-pointer no-underline hover:underline">ดูทั้งหมด</a>
+            <div className="mb-4 flex items-end justify-between gap-4">
+              <div>
+                <p className="mb-1 text-xs font-bold uppercase tracking-[.12em] text-[#3F6FAF]">{activeView === 'library' ? 'พื้นที่ส่วนตัว' : 'เลือกอ่านได้เลย'}</p>
+                <h2 id="novel-list-title" className="text-xl font-bold sm:text-2xl">{activeView === 'library' ? 'ชั้นหนังสือของฉัน' : 'นิยายอัปเดตล่าสุด'}</h2>
+              </div>
+              {!loading && <span className="shrink-0 rounded-full border border-[#DCE5F0] bg-white px-3 py-1.5 text-xs font-semibold text-[#64748B]">{displayedNovels.length} เรื่อง</span>}
             </div>
-            {activeView === 'discover' && <div className="flex gap-1 mb-4 md:mb-[18px] overflow-x-auto pb-1">
-              {genres.map((genre) => <button key={genre} type="button" onClick={() => setSelectedGenre(genre)} className={`py-1.5 px-3 md:px-3.5 rounded-lg text-[.8rem] md:text-[.82rem] font-medium cursor-pointer border-none whitespace-nowrap shrink-0 ${selectedGenre === genre ? 'bg-[#3F6FAF] text-white' : 'bg-transparent text-[#64748B] hover:bg-[#E8F0FA] hover:text-[#3F6FAF]'}`}>{genre}</button>)}
+            {activeView === 'discover' && <div aria-label="กรองตามประเภทนิยาย" className="mb-6 flex gap-2 overflow-x-auto pb-2">
+              {genres.map((genre) => <button key={genre} type="button" aria-pressed={selectedGenre === genre} onClick={() => setSelectedGenre(genre)} className={`min-h-10 shrink-0 whitespace-nowrap rounded-full border px-4 text-[.82rem] font-semibold ${selectedGenre === genre ? 'border-[#3F6FAF] bg-[#3F6FAF] text-white' : 'border-[#DCE5F0] bg-white text-[#64748B] hover:border-[#AFC8E8] hover:bg-[#E8F0FA] hover:text-[#3F6FAF]'}`}>{genre}</button>)}
             </div>}
 
             {activeView === 'library' && !currentUser && <div className="mb-5 rounded-2xl border border-dashed bg-white p-6 text-center"><p className="text-slate-600">เข้าสู่ระบบเพื่อดูรายการโปรดและประวัติการอ่าน</p><a href="/login" className="mt-3 inline-block rounded-lg bg-[#3F6FAF] px-4 py-2 font-semibold text-white">เข้าสู่ระบบ</a></div>}
             {activeView === 'library' && currentUser && <div className="mb-5 rounded-2xl border bg-white p-4"><h4 className="font-bold">ประวัติอ่านล่าสุด</h4>{library.history.length ? <div className="mt-2 flex gap-2 overflow-x-auto">{library.history.slice(0, 10).map((item) => <div key={item.id} className="min-w-56 rounded-xl bg-slate-50 p-3 text-sm"><p className="font-semibold">{item.novelTitle}</p><p className="text-slate-500">{item.chapterTitle || 'เนื้อหาหลัก'} • {item.progress}%</p></div>)}</div> : <p className="mt-2 text-sm text-slate-500">ยังไม่มีประวัติการอ่าน</p>}</div>}
 
             {/* NOVEL GRID */}
-            <div className="grid grid-cols-[repeat(auto-fill,minmax(130px,1fr))] md:grid-cols-[repeat(auto-fill,minmax(165px,1fr))] gap-5 md:gap-7 mb-8">
+            <div className="mb-8 grid grid-cols-2 gap-x-3 gap-y-6 sm:grid-cols-3 sm:gap-x-5 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
               {error && !loading ? (
-                <div className="col-span-full rounded-2xl border border-red-200 bg-red-50 p-6 text-center">
+                <div role="alert" className="col-span-full rounded-2xl border border-red-200 bg-red-50 p-6 text-center">
                   <p className="font-semibold text-red-700">{error}</p>
                   <p className="mt-1 text-sm text-red-600">ตรวจสอบ Wi-Fi แล้วลองโหลดข้อมูลอีกครั้ง</p>
                   <button type="button" onClick={reloadPage} className="mt-4 rounded-lg bg-[#3F6FAF] px-4 py-2 text-sm font-semibold text-white">ลองใหม่</button>
                 </div>
               ) : loading || libraryLoading ? (
-                <div className="col-span-full rounded-lg border border-dashed border-[#C7D2FE] bg-white/70 p-4 text-sm text-[#64748B]">
+                <div role="status" className="col-span-full rounded-2xl border border-dashed border-[#C7D2FE] bg-white/70 p-6 text-sm text-[#64748B]">
                   กำลังโหลดนิยายจากเซิร์ฟเวอร์...
                 </div>
               ) : error || libraryError ? (
-                <div className="col-span-full rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-600">
+                <div role="alert" className="col-span-full rounded-2xl border border-red-200 bg-red-50 p-6 text-sm text-red-600">
                   {error || libraryError}
                 </div>
               ) : displayedNovels.length === 0 ? (
-                <div className="col-span-full rounded-lg border border-dashed border-[#DCE5F0] bg-white/80 p-4 text-sm text-[#64748B]">
+                <div role="status" className="col-span-full rounded-2xl border border-dashed border-[#DCE5F0] bg-white/80 p-6 text-sm text-[#64748B]">
                   {activeView === 'library' ? 'ยังไม่มีนิยายในรายการโปรด' : 'ยังไม่พบนิยายที่ตรงกับการค้นหา'}
                 </div>
               ) : (
                 displayedNovels.map((novel) => (
-                  <div key={novel.id} className="cursor-pointer group rounded-[20px] bg-[#FFFFFF] p-2.5 pb-4 border border-[#DCE5F0]/80 shadow-[0_10px_30px_rgba(23,32,42,.055)] transition-all duration-300 hover:-translate-y-1.5 hover:shadow-[0_20px_45px_rgba(23,32,42,.12)]" onClick={() => openDetail(novel)}>
-                    <div className="w-full aspect-[2/3] rounded-[14px] overflow-hidden relative mb-3 shadow-sm transition-all duration-300 bg-gradient-to-br from-[#2F5785] via-[#5781B2] to-[#3F6FAF]">
+                  <article key={novel.id} className="group overflow-hidden rounded-[20px] border border-[#DCE5F0]/90 bg-[#FFFFFF] shadow-[0_8px_24px_rgba(23,32,42,.055)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_16px_38px_rgba(23,32,42,.11)]">
+                    <button type="button" aria-label={`เปิดรายละเอียดนิยาย ${novel.title}`} onClick={() => openDetail(novel)} className="block w-full p-2.5 pb-4 text-left">
+                    <div className="relative mb-3 aspect-[2/3] w-full overflow-hidden rounded-[14px] bg-gradient-to-br from-[#2F5785] via-[#5781B2] to-[#3F6FAF] shadow-sm">
                       <div className="absolute inset-0 flex items-center justify-center text-3xl" aria-hidden="true">📖</div>
                       {novel.image && (
                         <Image
@@ -430,49 +486,46 @@ export default function Homepage() {
                           alt={`หน้าปกนิยาย ${novel.title}`}
                           fill
                           unoptimized
-                          sizes="(max-width: 768px) 45vw, 180px"
+                          sizes="(max-width: 640px) 45vw, (max-width: 1024px) 30vw, 220px"
                           className="z-[1] object-cover transition-transform duration-500 group-hover:scale-105"
                           onError={(event) => {
                             event.currentTarget.style.display = 'none';
                           }}
                         />
                       )}
-                      <span className="absolute top-1.5 left-1.5 z-[2] text-[.6rem] md:text-[.65rem] font-bold py-0.5 px-1.5 rounded uppercase bg-[#10B981] text-white shadow-sm">ใหม่</span>
+                      <span className="absolute left-2 top-2 z-[2] max-w-[80%] truncate rounded-full border border-white/20 bg-black/35 px-2.5 py-1 text-[.65rem] font-semibold text-white shadow-sm backdrop-blur">{novel.genre}</span>
                     </div>
-                    <div className="text-[.78rem] md:text-[.8rem] font-semibold leading-snug mb-0.5 text-[#1B2A41]">{novel.title}</div>
-                    <div className="text-[.7rem] md:text-[.72rem] text-[#8795A8]">{novel.author}</div>
-                    <div className="flex items-center gap-1 text-[.7rem] md:text-[.72rem] text-[#F59E0B] font-semibold mt-1">★ {novel.rating.toFixed(1)}</div>
-                  </div>
+                    <h3 className="line-clamp-2 min-h-[2.6em] text-[.88rem] font-bold leading-[1.3] text-[#1B2A41] sm:text-[.92rem]">{novel.title}</h3>
+                    <p className="mt-1 truncate text-xs text-[#64748B]">{novel.author}</p>
+                    <div className="mt-2 flex items-center justify-between gap-2 text-xs"><span className="font-bold text-[#D97706]">★ {novel.rating.toFixed(1)}</span><span className="text-[#64748B]">ดูรายละเอียด →</span></div>
+                    </button>
+                  </article>
                 ))
               )}
             </div>
+            </section>
           </div>
         </div>
 
         {/* MOBILE BOTTOM NAV */}
-        <div className="md:hidden shrink-0 bg-white border-t border-[#DCE5F0] flex">
-          <a href="#discover" className="flex-1 flex flex-col items-center py-2.5 gap-0.5 no-underline text-[#3F6FAF]">
-            <span className="text-lg">🧭</span>
-            <span className="text-[.62rem] font-semibold">ค้นพบ</span>
+        <nav aria-label="เมนูด้านล่าง" className="flex shrink-0 border-t border-[#DCE5F0] bg-white pb-[env(safe-area-inset-bottom)] lg:hidden">
+          <a href="#discover" aria-current={activeView === 'discover' ? 'page' : undefined} className={`flex min-h-16 flex-1 flex-col items-center justify-center gap-1 no-underline ${activeView === 'discover' ? 'text-[#3F6FAF]' : 'text-[#64748B]'}`}>
+            <span aria-hidden="true" className="text-lg">🧭</span>
+            <span className="text-xs font-semibold">ค้นพบ</span>
           </a>
-          <a href="#library" className="flex-1 flex flex-col items-center py-2.5 gap-0.5 no-underline text-[#8795A8]">
-            <span className="text-lg">📖</span>
-            <span className="text-[.62rem] font-medium">ชั้นหนังสือ</span>
+          <a href="#library" aria-current={activeView === 'library' ? 'page' : undefined} className={`flex min-h-16 flex-1 flex-col items-center justify-center gap-1 no-underline ${activeView === 'library' ? 'text-[#3F6FAF]' : 'text-[#64748B]'}`}>
+            <span aria-hidden="true" className="text-lg">📖</span>
+            <span className="text-xs font-semibold">ชั้นหนังสือ</span>
           </a>
-          <a href="#updates" className="flex-1 flex flex-col items-center py-2.5 gap-0.5 no-underline text-[#8795A8] relative">
-            <span className="text-lg">✨</span>
-            <span className="text-[.62rem] font-medium">อัปเดต</span>
-            <span className="absolute top-1.5 right-[calc(50%-16px)] w-4 h-4 bg-[#3F6FAF] text-white text-[.5rem] font-bold rounded-full grid place-items-center">3</span>
-          </a>
-          {canManageNovels && <a href="/admin" className="flex-1 flex flex-col items-center py-2.5 gap-0.5 no-underline text-[#3F6FAF]">
+          {canManageNovels && <a href="/admin" className="flex min-h-16 flex-1 flex-col items-center justify-center gap-1 no-underline text-[#3F6FAF]">
             <NovelManagementIcon className="w-[18px] h-[18px]" />
-            <span className="text-[.62rem] font-semibold">{managementLabel}</span>
+            <span className="text-xs font-semibold">{managementLabel}</span>
           </a>}
-          <a href={currentUser ? '/profile' : '/login'} className="flex-1 flex flex-col items-center py-2.5 gap-0.5 no-underline text-[#8795A8]">
-            <span className="text-lg">👤</span>
-            <span className="text-[.62rem] font-medium">{currentUser ? 'โปรไฟล์' : 'เข้าสู่ระบบ'}</span>
+          <a href={currentUser ? '/profile' : '/login'} className="flex min-h-16 flex-1 flex-col items-center justify-center gap-1 no-underline text-[#64748B]">
+            <span aria-hidden="true" className="text-lg">👤</span>
+            <span className="text-xs font-semibold">{currentUser ? 'โปรไฟล์' : 'เข้าสู่ระบบ'}</span>
           </a>
-        </div>
+        </nav>
       </main>
 
       {/* ── DETAIL OVERLAY (SIDE SHEET) ── */}
@@ -480,10 +533,10 @@ export default function Homepage() {
         className={`fixed inset-0 bg-black/35 z-[100] transition-opacity duration-300 ${isDetailOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
         onClick={closeDetail}
       />}
-      {selectedNovel && <div className={`fixed right-0 top-0 bottom-0 w-full max-w-[440px] bg-white z-[101] overflow-y-auto transition-transform duration-300 flex flex-col ${isDetailOpen ? 'translate-x-0' : 'translate-x-full'}`}>
+      {selectedNovel && <div role="dialog" aria-modal="true" aria-label={`รายละเอียดนิยาย ${selectedNovel.title}`} className={`fixed bottom-0 right-0 top-0 z-[101] flex w-full max-w-[460px] flex-col overflow-y-auto bg-white shadow-2xl transition-transform duration-300 ${isDetailOpen ? 'translate-x-0' : 'translate-x-full'}`}>
         <div className="h-[180px] md:h-[200px] bg-gradient-to-br from-[#1a1a2e] to-[#3F6FAF] relative flex items-center justify-center overflow-hidden">
           {selectedNovel.image && <Image src={selectedNovel.image} alt={selectedNovel.title} fill unoptimized className="object-cover opacity-35" />}
-          <button type="button" onClick={closeDetail} className="absolute top-4 right-4 bg-white/20 hover:bg-white/40 rounded-full w-8 h-8 flex items-center justify-center text-white border-none cursor-pointer transition">❌</button>
+          <button type="button" aria-label="ปิดรายละเอียดนิยาย" onClick={closeDetail} className="absolute right-4 top-4 flex h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-black/20 text-white transition hover:bg-black/35">✕</button>
           <h2 className="text-white text-xl md:text-2xl font-bold z-10 px-12 text-center">{selectedNovel.title}</h2>
         </div>
         <div className="p-5 md:p-7">
@@ -525,12 +578,13 @@ export default function Homepage() {
       {/* ── READER OVERLAY ── */}
       {isReaderOpen && selectedNovel && (
         <div className={`fixed inset-0 z-[200] flex flex-col transition-colors ${readerTheme === 'dark' ? 'bg-[#111827] text-slate-100' : 'bg-white text-[#1B2A41]'}`}>
-          <div className="p-4 md:p-5 max-w-4xl w-full mx-auto flex flex-col h-full">
+          <div className={`absolute inset-x-0 top-0 h-1 ${readerTheme === 'dark' ? 'bg-slate-800' : 'bg-slate-100'}`}><div className="h-full bg-[#3F6FAF] transition-[width] duration-150" style={{ width: `${readingProgress}%` }} /></div>
+          <div className="mx-auto flex h-full w-full max-w-5xl flex-col p-4 pt-5 md:p-6 md:pt-7">
             <div className={`mb-4 flex flex-col gap-3 border-b pb-4 md:mb-5 md:flex-row md:items-center md:justify-between ${readerTheme === 'dark' ? 'border-slate-700' : 'border-slate-200'}`}>
               <div><p className="text-sm text-[#6F96C9]">{selectedNovel.title}</p><h2 className="font-bold text-lg md:text-xl">{selectedChapter?.title || selectedNovel.title}</h2></div>
               <div className="flex flex-wrap items-center gap-2">
                 <div className={`flex items-center rounded-lg border p-1 ${readerTheme === 'dark' ? 'border-slate-600 bg-slate-800' : 'border-slate-200 bg-slate-50'}`} aria-label="ขนาดตัวหนังสือ">
-                  {[14, 16, 18].map((size) => <button key={size} type="button" onClick={() => changeReaderFontSize(size)} className={`rounded-md px-2.5 py-1 text-xs font-semibold ${readerFontSize === size ? 'bg-[#3F6FAF] text-white' : 'bg-transparent'}`}>{size}</button>)}
+                  {[18, 24, 28].map((size) => <button key={size} type="button" onClick={() => changeReaderFontSize(size)} className={`rounded-md px-2.5 py-1 text-xs font-semibold ${readerFontSize === size ? 'bg-[#3F6FAF] text-white' : 'bg-transparent'}`}>{size}px</button>)}
                 </div>
                 <div className={`flex items-center rounded-lg border p-1 ${readerTheme === 'dark' ? 'border-slate-600 bg-slate-800' : 'border-slate-200 bg-slate-50'}`}>
                   <button type="button" onClick={() => changeReaderTheme('light')} className={`rounded-md px-2.5 py-1 text-xs font-semibold ${readerTheme === 'light' ? 'bg-white text-[#1B2A41] shadow-sm' : 'text-slate-300'}`}>☀ สว่าง</button>
@@ -539,12 +593,13 @@ export default function Homepage() {
                 <button type="button" className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${readerTheme === 'dark' ? 'bg-slate-700 text-white hover:bg-slate-600' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`} onClick={closeReader}>ปิด</button>
               </div>
             </div>
-            <div onScroll={(event) => { const element = event.currentTarget; const maximum = element.scrollHeight - element.clientHeight; setReadingProgress(maximum > 0 ? Math.round((element.scrollTop / maximum) * 100) : 100); }} style={{ fontSize: `${readerFontSize}px` }} className={`flex-1 overflow-auto leading-loose pb-10 ${readerTheme === 'dark' ? 'text-slate-200' : 'text-gray-700'}`}>
-              <p className="whitespace-pre-wrap">{selectedChapter?.content || selectedNovel.content || 'ตอนนี้ยังไม่มีเนื้อหา'}</p>
+            <div onScroll={(event) => { const element = event.currentTarget; const maximum = element.scrollHeight - element.clientHeight; setReadingProgress(maximum > 0 ? Math.round((element.scrollTop / maximum) * 100) : 100); }} style={{ fontSize: `${readerFontSize}px` }} className={`flex-1 overflow-auto pb-12 leading-[1.9] ${readerTheme === 'dark' ? 'text-slate-200' : 'text-gray-700'}`}>
+              <p className="mx-auto w-full max-w-[70ch] whitespace-pre-wrap">{selectedChapter?.content || selectedNovel.content || 'ตอนนี้ยังไม่มีเนื้อหา'}</p>
             </div>
           </div>
         </div>
       )}
+      <SettingsPanel open={settingsOpen} onClose={() => setSettingsOpen(false)} currentUser={currentUser} readerTheme={readerTheme} onReaderThemeChange={changeReaderTheme} />
     </div>
   );
 }

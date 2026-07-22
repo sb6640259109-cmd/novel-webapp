@@ -23,8 +23,7 @@
 # misc
 .DS_Store
 *.pem
-firebase-service-account.json
-*-firebase-adminsdk-*.json
+.npm-cache/
 
 # debug
 npm-debug.log*
@@ -42,8 +41,6 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# generated Prisma Client
-/generated/prisma
 
 # locally uploaded novel covers
 /public/uploads/novels/*
@@ -53,3 +50,7 @@ next-env.d.ts
 
 # user profile uploads stay local
 /public/uploads/profiles/
+
+# local agent tooling
+/.agents/
+/skills-lock.json

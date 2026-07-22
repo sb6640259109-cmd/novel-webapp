@@ -1,73 +1,40 @@
-import bcrypt from 'bcryptjs';
-import { NextResponse } from 'next/server';
-import prisma from '@/lib/prisma';
-import { signToken } from '@/lib/jwt';
-import { AUTH_COOKIE_NAME, getAuthCookieOptions } from '@/lib/cookies';
-import { registerWithFirebase } from '@/lib/firebase';
+import { createAuthClient } from '@/lib/supabase-auth';
+import { getSupabase } from '@/lib/supabase';
+import { findDuplicateUser, findUserById } from '@/lib/users';
 
 export async function POST(request) {
   try {
     const body = await request.json();
     const username = body.username?.trim();
     const email = body.email?.trim().toLowerCase();
-    const { password } = body;
-
-    if (!username || !email || !password) {
-      return Response.json(
-        { success: false, message: 'กรุณากรอกข้อมูลให้ครบถ้วน' },
-        { status: 400 }
-      );
-    }
-
-    const existingUser = await prisma.user.findFirst({
-      where: { OR: [{ email }, { username }] },
+    const password = body.password;
+    if (body.termsAccepted !== true) return Response.json({ success: false, message: 'กรุณายอมรับกฎการใช้งานและนโยบายความเป็นส่วนตัวก่อนสมัครสมาชิก' }, { status: 400 });
+    if (!username || !email || !password) return Response.json({ success: false, message: 'กรุณากรอกข้อมูลให้ครบถ้วน' }, { status: 400 });
+    if (username.length < 3 || username.length > 50 || password.length < 8) return Response.json({ success: false, message: 'ชื่อผู้ใช้ต้องมี 3–50 ตัวอักษร และรหัสผ่านอย่างน้อย 8 ตัวอักษร' }, { status: 400 });
+    if (await findDuplicateUser({ email, username })) return Response.json({ success: false, message: 'อีเมลหรือชื่อผู้ใช้นี้ถูกใช้แล้ว' }, { status: 409 });
+    const { data: created, error: createError } = await getSupabase().auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true,
+      user_metadata: { username },
+      app_metadata: { role: 'READER' },
     });
-
-    if (existingUser) {
-      return Response.json(
-        { success: false, message: 'อีเมลหรือชื่อผู้ใช้นี้ถูกใช้แล้ว' },
-        { status: 409 }
-      );
+    if (createError || !created.user) return Response.json({ success: false, message: createError?.message || 'สมัครสมาชิกไม่สำเร็จ' }, { status: 400 });
+    const supabase = await createAuthClient();
+    const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+    if (signInError) {
+      await getSupabase().auth.admin.deleteUser(created.user.id);
+      throw signInError;
     }
-
-    const firebaseUser = await registerWithFirebase(email, password);
-
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const user = await prisma.user.create({
-      data: {
-        id: firebaseUser.localId || undefined,
-        username,
-        email,
-        password: hashedPassword,
-        firebaseUid: firebaseUser.localId || null,
-        role: 'READER',
-      },
-    });
-
-    const tokenPayload = { id: user.id, username, email, role: user.role, firebaseUid: firebaseUser.localId };
-    const userData = { id: user.id, username: user.username, email: user.email, role: user.role };
-
-    const token = signToken(tokenPayload);
-    const response = NextResponse.json({
+    const user = await findUserById(created.user.id);
+    return Response.json({
       success: true,
-      message: 'ลงทะเบียนสำเร็จด้วย Firebase Auth',
-      user: userData,
-      firebase: {
-        uid: firebaseUser.localId,
-        email: firebaseUser.email,
-      },
-    });
-
-    response.cookies.set(AUTH_COOKIE_NAME, token, getAuthCookieOptions(request));
-    return response;
+      message: 'ลงทะเบียนและเข้าสู่ระบบสำเร็จ',
+      user,
+      requiresEmailConfirmation: false,
+    }, { status: 201 });
   } catch (error) {
-    console.error('Register API error:', error);
-    const message = error instanceof Error ? error.message : 'เกิดข้อผิดพลาดในการลงทะเบียน';
-    const status = message.includes('EMAIL_EXISTS') || message.includes('already') ? 409 : 500;
-
-    return Response.json(
-      { success: false, message },
-      { status }
-    );
+    console.error('Supabase register error:', error);
+    return Response.json({ success: false, message: 'เกิดข้อผิดพลาดในการลงทะเบียน' }, { status: 500 });
   }
 }

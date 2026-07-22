@@ -7,12 +7,12 @@ export async function GET(request, { params }) {
   const { id } = await params;
   const selectedNovel = await findNovel(id);
   if (!selectedNovel) return Response.json({ success: false, message: 'ไม่พบนิยาย' }, { status: 404 });
-  const user = getAuthUser(request);
+  const user = await getAuthUser(request);
   return Response.json({ success: true, engagement: await getEngagement(id, user?.id) });
 }
 
 export async function DELETE(request, { params }) {
-  const user = getAuthUser(request);
+  const user = await getAuthUser(request);
   if (!hasRole(user, [ROLES.ADMIN])) return Response.json({ success: false, message: 'เฉพาะ Admin เท่านั้นที่ลบความคิดเห็นได้' }, { status: 403 });
   const { id } = await params;
   const commentId = new URL(request.url).searchParams.get('commentId');
@@ -23,7 +23,7 @@ export async function DELETE(request, { params }) {
 }
 
 export async function POST(request, { params }) {
-  const user = getAuthUser(request);
+  const user = await getAuthUser(request);
   if (!user) return Response.json({ success: false, message: 'กรุณาเข้าสู่ระบบก่อน' }, { status: 401 });
   const { id } = await params;
   const selectedNovel = await findNovel(id);

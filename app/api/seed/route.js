@@ -9,15 +9,15 @@ const samples = [
 
 export async function POST(request) {
   try {
-    const user = getAuthUser(request);
+    const user = await getAuthUser(request);
     if (!user) return Response.json({ success: false, message: 'กรุณาเข้าสู่ระบบก่อนเพิ่มข้อมูลตัวอย่าง' }, { status: 401 });
     if (!hasRole(user, [ROLES.ADMIN])) return Response.json({ success: false, message: 'เฉพาะ Admin เท่านั้นที่เพิ่มข้อมูลตัวอย่างได้' }, { status: 403 });
     const existingTitles = new Set((await listNovels()).map((novel) => novel.title));
     const missing = samples.filter((novel) => !existingTitles.has(novel.title));
     await Promise.all(missing.map(addNovel));
-    return Response.json({ success: true, message: `เพิ่มข้อมูลตัวอย่างใน Firestore ${missing.length} เรื่อง`, created: missing.length });
+    return Response.json({ success: true, message: `เพิ่มข้อมูลตัวอย่างใน Supabase ${missing.length} เรื่อง`, created: missing.length });
   } catch (error) {
-    console.error('Firestore seed error:', error);
-    return Response.json({ success: false, message: 'เพิ่มข้อมูลตัวอย่างใน Firestore ไม่สำเร็จ' }, { status: 500 });
+    console.error('Supabase seed error:', error);
+    return Response.json({ success: false, message: 'เพิ่มข้อมูลตัวอย่างใน Supabase ไม่สำเร็จ' }, { status: 500 });
   }
 }

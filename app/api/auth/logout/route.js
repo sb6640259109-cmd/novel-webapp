@@ -1,11 +1,7 @@
-import { NextResponse } from 'next/server';
-import { AUTH_COOKIE_NAME, getAuthCookieOptions } from '@/lib/cookies';
+import { createAuthClient } from '@/lib/supabase-auth';
 
-export async function POST(request) {
-  const response = NextResponse.json({ success: true, message: 'ออกจากระบบสำเร็จ' });
-  response.cookies.set(AUTH_COOKIE_NAME, '', {
-    ...getAuthCookieOptions(request),
-    maxAge: 0,
-  });
-  return response;
+export async function POST() {
+  const supabase = await createAuthClient();
+  await supabase.auth.signOut();
+  return Response.json({ success: true, message: 'ออกจากระบบสำเร็จ' });
 }

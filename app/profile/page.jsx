@@ -100,15 +100,15 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#203A5F] via-[#355F91] to-[#7397C4] p-6 text-[#1B2A41]">
+    <div className="novellib-profile min-h-screen bg-gradient-to-br from-[#203A5F] via-[#355F91] to-[#7397C4] px-4 py-6 text-[#1B2A41] sm:px-6 lg:px-8 lg:py-10">
       <div className="mx-auto max-w-5xl">
         {/* Header */}
-        <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div className="mb-7 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div>
             <h1 className="text-3xl font-bold text-white">ข้อมูลผู้ใช้</h1>
             <p className="text-sm text-white/70 mt-1">จัดการบัญชีของคุณและตรวจสอบสิทธิ์การเข้าถึง</p>
           </div>
-          <div className="flex gap-3">
+          <div className="flex flex-wrap gap-3">
             <Link
               href="/" 
               className="rounded-lg bg-white/10 px-4 py-2 text-sm font-semibold text-white no-underline hover:bg-white/20 transition-colors"
@@ -124,19 +124,36 @@ export default function ProfilePage() {
           </div>
         </div>
 
+        {user.role === 'READER' && (
+          <section className="relative mb-6 overflow-hidden rounded-[28px] border border-white/15 bg-[#203A5F] p-6 text-white shadow-[0_24px_60px_rgba(10,28,50,.24)] sm:p-8">
+            <div aria-hidden="true" className="absolute -right-10 -top-16 h-52 w-52 rounded-full border-[32px] border-white/[.04]" />
+            <div className="relative grid gap-6 md:grid-cols-[1fr_auto] md:items-center">
+              <div className="max-w-2xl">
+                <p className="text-xs font-bold uppercase tracking-[.16em] text-[#AFC8E8]">จากนักอ่านสู่นักเขียน</p>
+                <h2 className="mt-2 text-2xl font-bold sm:text-3xl">มีเรื่องที่อยากเล่าให้คนอื่นอ่านไหม?</h2>
+                <p className="mt-3 max-w-xl leading-7 text-white/75">สมัครเป็นนักเขียนเพื่อเผยแพร่นิยาย สร้างตอน และดูแลผลงานของคุณบน NovelLib</p>
+                <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-sm text-white/85"><span>✓ สมัครฟรี</span><span>✓ จัดการตอนด้วยตัวเอง</span><span>✓ ส่งคำขอครั้งเดียว</span></div>
+              </div>
+              <Link href="/author-apply" className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-white px-6 py-3 font-bold text-[#203A5F] no-underline shadow-lg transition-transform hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white">
+                เริ่มสมัครนักเขียน <span aria-hidden="true">→</span>
+              </Link>
+            </div>
+          </section>
+        )}
+
         {/* Profile Card */}
-        <div className="rounded-[32px] bg-[#FFFFFF] p-6 md:p-10 shadow-[0_30px_90px_rgba(10,28,26,.28)] border border-white/20 mb-6">
+        <div className="mb-6 rounded-[28px] border border-white/20 bg-[#FFFFFF] p-5 shadow-[0_24px_64px_rgba(10,28,26,.16)] sm:p-7 lg:p-9">
           <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-            <div className="flex items-center gap-5">
+            <div className="flex min-w-0 flex-col items-start gap-4 sm:flex-row sm:items-center sm:gap-5">
               <div className="relative flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-full border-4 border-white bg-[#E8F0FA] text-3xl font-bold text-[#3F6FAF] shadow-md">
                 {user.avatarUrl
                   ? <Image src={user.avatarUrl} alt={user.displayName || user.username} fill unoptimized className="object-cover" />
                   : (user.displayName || user.username).slice(0, 1).toUpperCase()}
               </div>
-              <div>
+              <div className="min-w-0">
               <p className="text-sm uppercase tracking-widest text-[#8795A8] font-semibold">บัญชีผู้ใช้</p>
-              <h2 className="mt-2 text-3xl font-bold text-[#1B2A41]">{user.displayName || user.username}</h2>
-              <p className="mt-1 text-sm text-slate-500">@{user.username}</p>
+              <h2 className="mt-2 break-words text-2xl font-bold text-[#1B2A41] sm:text-3xl">{user.displayName || user.username}</h2>
+              <p className="mt-1 break-all text-sm text-slate-500">@{user.username}</p>
               {user.bio && <p className="mt-2 max-w-xl text-sm text-slate-600">{user.bio}</p>}
               </div>
             </div>
@@ -213,7 +230,7 @@ export default function ProfilePage() {
                     readOnly
                     className="mt-2 w-full cursor-not-allowed rounded-xl border border-[#E5E7EB] bg-slate-100 px-3 py-2.5 text-slate-500"
                   />
-                  <span className="mt-1 block text-xs font-normal">อีเมลที่ยืนยันกับ Firebase ไม่สามารถแก้จากหน้านี้ได้</span>
+                  <span className="mt-1 block text-xs font-normal">อีเมลที่ยืนยันกับ Supabase ไม่สามารถแก้จากหน้านี้ได้</span>
                 </label>
                 <label className="text-sm font-semibold text-[#64748B] sm:col-span-2">
                   ประวัติย่อ
@@ -228,7 +245,7 @@ export default function ProfilePage() {
                   <span className="mt-1 block text-right text-xs font-normal">{(formData.bio || '').length}/500</span>
                 </label>
               </div>
-              <div className="mt-5 flex gap-3">
+              <div className="mt-5 flex flex-wrap gap-3">
                 <button disabled={isSaving} className="rounded-lg bg-[#3F6FAF] px-5 py-2.5 text-sm font-bold text-white disabled:opacity-60">
                   {isSaving ? 'กำลังบันทึก...' : 'บันทึกข้อมูล'}
                 </button>
@@ -296,7 +313,7 @@ export default function ProfilePage() {
           </div>
 
           {/* Logout Button */}
-          <div className="flex gap-3">
+          <div className="flex flex-col gap-3 sm:flex-row">
             <button
               onClick={handleLogout}
               className="flex-1 rounded-lg bg-[#EF4444] px-4 py-3 text-sm font-bold text-white hover:bg-[#DC2626] transition-colors"

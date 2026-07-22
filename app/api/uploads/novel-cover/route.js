@@ -21,7 +21,7 @@ function detectImageType(buffer) {
 
 export async function POST(request) {
   try {
-    const user = getAuthUser(request);
+    const user = await getAuthUser(request);
     if (!user) {
       return Response.json({ success: false, message: 'เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่ก่อนอัปโหลดภาพ' }, { status: 401 });
     }

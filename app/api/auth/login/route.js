@@ -1,61 +1,20 @@
-import bcrypt from 'bcryptjs';
-import { NextResponse } from 'next/server';
-import prisma from '@/lib/prisma';
-import { signToken } from '@/lib/jwt';
-import { AUTH_COOKIE_NAME, getAuthCookieOptions } from '@/lib/cookies';
-import { normalizeRole } from '@/lib/auth';
+import { createAuthClient } from '@/lib/supabase-auth';
+import { findUserById } from '@/lib/users';
 
 export async function POST(request) {
   try {
     const body = await request.json();
     const email = body.email?.trim().toLowerCase();
-    const { password } = body;
-
-    if (!email || !password) {
-      return Response.json(
-        { success: false, message: 'กรุณากรอกอีเมลและรหัสผ่าน' },
-        { status: 400 }
-      );
-    }
-
-    const user = await prisma.user.findUnique({ where: { email } });
-
-    if (!user) {
-      return Response.json(
-        { success: false, message: 'ไม่พบผู้ใช้นี้ในระบบ' },
-        { status: 404 }
-      );
-    }
-
-    const isValidPassword = await bcrypt.compare(password, user.password);
-
-    if (!isValidPassword) {
-      return Response.json(
-        { success: false, message: 'รหัสผ่านไม่ถูกต้อง' },
-        { status: 401 }
-      );
-    }
-
-    const role = normalizeRole(user.role);
-    const token = signToken({ id: user.id, email: user.email, username: user.username, role });
-    const response = NextResponse.json({
-      success: true,
-      message: 'เข้าสู่ระบบสำเร็จ',
-      user: {
-        id: user.id,
-        username: user.username,
-        email: user.email,
-        role,
-      },
-    });
-
-    response.cookies.set(AUTH_COOKIE_NAME, token, getAuthCookieOptions(request));
-    return response;
+    const password = body.password;
+    if (!email || !password) return Response.json({ success: false, message: 'กรุณากรอกอีเมลและรหัสผ่าน' }, { status: 400 });
+    const supabase = await createAuthClient();
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error || !data.user) return Response.json({ success: false, message: 'อีเมลหรือรหัสผ่านไม่ถูกต้อง' }, { status: 401 });
+    const user = await findUserById(data.user.id);
+    if (!user) return Response.json({ success: false, message: 'ไม่พบข้อมูลโปรไฟล์ผู้ใช้' }, { status: 500 });
+    return Response.json({ success: true, message: 'เข้าสู่ระบบสำเร็จ', user });
   } catch (error) {
-    console.error('Login API error:', error);
-    return Response.json(
-      { success: false, message: 'เกิดข้อผิดพลาดในการเข้าสู่ระบบ' },
-      { status: 500 }
-    );
+    console.error('Supabase login error:', error);
+    return Response.json({ success: false, message: 'เกิดข้อผิดพลาดในการเข้าสู่ระบบ' }, { status: 500 });
   }
 }

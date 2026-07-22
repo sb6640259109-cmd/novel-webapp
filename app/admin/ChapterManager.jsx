@@ -5,8 +5,8 @@ import api from '@/lib/axios-client';
 
 const blank = { title: '', content: '' };
 
-export default function ChapterManager({ novels, role }) {
-  const [novelId, setNovelId] = useState('');
+export default function ChapterManager({ novels, role, selectedNovelId = '' }) {
+  const [novelId, setNovelId] = useState(String(selectedNovelId || ''));
   const [chapters, setChapters] = useState([]);
   const [form, setForm] = useState(blank);
   const [editingId, setEditingId] = useState(null);
@@ -84,7 +84,7 @@ export default function ChapterManager({ novels, role }) {
         {novels.map((novel) => <option key={novel.id} value={novel.id}>{novel.title}</option>)}
       </select>
       {notice.text && <div className={`mb-4 rounded-xl border p-3 text-sm ${notice.type === 'error' ? 'border-red-200 bg-red-50 text-red-700' : 'border-emerald-200 bg-emerald-50 text-emerald-700'}`}>{notice.text}</div>}
-      {novelId && <div className="grid gap-6 lg:grid-cols-[390px_1fr]">
+      {novelId && <div className="grid gap-6 xl:grid-cols-[380px_minmax(0,1fr)]">
         <form onSubmit={submit} className="h-fit rounded-2xl border bg-slate-50 p-5">
           <div className="mb-3 flex justify-between"><h3 className="font-bold">{editingId ? 'แก้ไขตอน' : 'เพิ่มตอนใหม่'}</h3>{editingId && <button type="button" onClick={reset} className="text-sm text-slate-500">ยกเลิก</button>}</div>
           <input value={form.title} onChange={(event) => setForm((old) => ({ ...old, title: event.target.value }))} placeholder="ชื่อตอน *" required className="mb-3 w-full rounded-xl border px-3 py-2.5" />

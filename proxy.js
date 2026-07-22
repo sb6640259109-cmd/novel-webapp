@@ -1,47 +1,45 @@
+import { createServerClient } from '@supabase/ssr';
 import { NextResponse } from 'next/server';
-import { verifyToken } from '@/lib/jwt';
-import { AUTH_COOKIE_NAME } from '@/lib/cookies';
 
 const authPages = ['/login', '/register'];
 
-function readUser(request) {
-  const token = request.cookies.get(AUTH_COOKIE_NAME)?.value;
-  if (!token) return null;
-
-  try {
-    const user = verifyToken(token);
-    return { ...user, role: user.role === 'USER' ? 'READER' : user.role };
-  } catch {
-    return null;
-  }
+function redirectWithCookies(path, request, sourceResponse) {
+  const target = NextResponse.redirect(new URL(path, request.url));
+  sourceResponse.cookies.getAll().forEach((cookie) => target.cookies.set(cookie));
+  return target;
 }
 
-function memberHome(user) {
-  return ['AUTHOR', 'ADMIN'].includes(user.role) ? '/admin' : '/profile';
-}
-
-export function proxy(request) {
-  const { pathname } = request.nextUrl;
-  const user = readUser(request);
+export async function proxy(request) {
+  let response = NextResponse.next({ request });
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
+  const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+    || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    || process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) return response;
+  const supabase = createServerClient(url, key, {
+    cookies: {
+      getAll: () => request.cookies.getAll(),
+      setAll: (items) => {
+        items.forEach(({ name, value }) => request.cookies.set(name, value));
+        response = NextResponse.next({ request });
+        items.forEach(({ name, value, options }) => response.cookies.set(name, value, options));
+      },
+    },
+  });
+  const { data: { user } } = await supabase.auth.getUser();
+  const pathname = request.nextUrl.pathname;
+  const role = user?.app_metadata?.role || 'READER';
 
   if (pathname.startsWith('/admin')) {
-    if (!user) return NextResponse.redirect(new URL('/login', request.url));
-    if (!['AUTHOR', 'ADMIN'].includes(user.role)) {
-      return NextResponse.redirect(new URL('/profile', request.url));
-    }
+    if (!user) return redirectWithCookies('/login', request, response);
+    if (!['AUTHOR', 'ADMIN'].includes(role)) return redirectWithCookies('/profile', request, response);
   }
-
-  if (pathname === '/profile' && !user) {
-    return NextResponse.redirect(new URL('/login', request.url));
-  }
-
+  if ((pathname === '/profile' || pathname === '/author-apply') && !user) return redirectWithCookies('/login', request, response);
   if (authPages.includes(pathname) && user) {
-    return NextResponse.redirect(new URL(memberHome(user), request.url));
+    const home = role === 'ADMIN' ? '/admin' : role === 'AUTHOR' ? '/' : '/profile';
+    return redirectWithCookies(home, request, response);
   }
-
-  return NextResponse.next();
+  return response;
 }
 
-export const config = {
-  matcher: ['/admin/:path*', '/profile', '/login', '/register'],
-};
+export const config = { matcher: ['/admin/:path*', '/profile', '/author-apply', '/login', '/register'] };
